@@ -1,0 +1,12 @@
+# 主镜像源（清华）
+index-url = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple"
+
+# 其他备用镜像源
+[[index]]
+name = "aliyun"
+url = "https://mirrors.aliyun.com/pypi/simple/"
+
+[[index]]
+name = "tencent"
+url = "http://mirrors.cloud.tencent.com/pypi/simple"
+

@@ -1,0 +1,28 @@
+# ~/.zshrc — bootstrap only (managed by chezmoi)
+
+# --------------------------------------------------
+# Machine-local pre profile
+# --------------------------------------------------
+if [[ -f "$HOME/.profile.before" ]]; then
+  source "$HOME/.profile.before"
+fi
+
+# --------------------------------------------------
+# ZDOTDIR setup
+# --------------------------------------------------
+export ZDOTDIR="$HOME/.zsh"
+
+# --------------------------------------------------
+# Load real zsh configuration
+# --------------------------------------------------
+if [[ -f "$ZDOTDIR/zshrc" ]]; then
+  source "$ZDOTDIR/zshrc"
+fi
+
+# --------------------------------------------------
+# Machine-local post profile
+# --------------------------------------------------
+if [[ -f "$HOME/.profile.after" ]]; then
+  source "$HOME/.profile.after"
+fi
+

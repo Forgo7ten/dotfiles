@@ -1,0 +1,96 @@
+// ~/.gradle/init.gradle
+
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+
+def ALIYUN_REPOS = [
+    public: 'https://maven.aliyun.com/repository/public',
+    google: 'https://maven.aliyun.com/repository/google',
+    gradlePlugin: 'https://maven.aliyun.com/repository/gradle-plugin',
+    jcenter: 'https://maven.aliyun.com/repository/jcenter'
+]
+
+class AliyunMirror {
+    static void configure(RepositoryHandler repositories, Map<String, String> mirrors) {
+        // 先添加阿里云镜像
+        repositories.maven { 
+            url mirrors.public
+            name 'AliyunPublic'
+        }
+        repositories.maven { 
+            url mirrors.google
+            name 'AliyunGoogle'
+        }
+        repositories.maven { 
+            url 'https://jitpack.io'
+            name 'JitPack'
+        }
+        
+        repositories.google()
+        repositories.mavenCentral()
+        repositories.gradlePluginPortal()
+    }
+}
+
+// 配置插件仓库
+beforeSettings { settings ->
+    settings.pluginManagement {
+        repositories {
+            maven { 
+                url ALIYUN_REPOS.gradlePlugin
+                name 'AliyunGradlePlugin'
+            }
+            maven { 
+                url ALIYUN_REPOS.public
+                name 'AliyunPublic'
+            }
+            maven { 
+                url ALIYUN_REPOS.google
+                name 'AliyunGoogle'
+            }
+            
+            gradlePluginPortal()
+            google()
+            mavenCentral()
+        }
+    }
+}
+
+// 配置依赖仓库
+gradle.settingsEvaluated { settings ->
+    try {
+        settings.dependencyResolutionManagement {
+            // 改为 PREFER_SETTINGS，允许 settings.gradle 覆盖
+            repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+            
+            repositories {
+                AliyunMirror.configure(it, ALIYUN_REPOS)
+            }
+        }
+    } catch (Exception e) {
+        logger.debug("Could not configure dependencyResolutionManagement: ${e.message}")
+    }
+}
+
+// 向后兼容
+allprojects {
+    buildscript {
+        repositories {
+            AliyunMirror.configure(it, ALIYUN_REPOS)
+        }
+    }
+    
+    repositories {
+        AliyunMirror.configure(it, ALIYUN_REPOS)
+    }
+}
+
+
+// 打印信息
+gradle.projectsLoaded {
+    logger.lifecycle """
+    ╔═══════════════════════════════════════════╗
+    ║  阿里云 Maven 镜像已启用                  ║
+    ║  Aliyun Maven Mirror Enabled              ║
+    ╚═══════════════════════════════════════════╝
+    """.stripIndent()
+}

@@ -1,0 +1,34 @@
+# ~/.zsh/zshrc
+# Real Zsh entry point (managed by chezmoi)
+
+ZSH_DIR="$HOME/.zsh"
+
+# --------------------------------------------------
+# 1. Load core configuration (plugin-independent)
+# --------------------------------------------------
+
+if [[ -d "$ZSH_DIR/core" ]]; then
+  for file in "$ZSH_DIR/core/"*.zsh; do
+    [[ -r "$file" ]] && source "$file"
+  done
+fi
+
+# --------------------------------------------------
+# 2. Load plugin manager (choose ONE)
+# --------------------------------------------------
+
+# Currently enabled: zinit
+if [[ -r "$ZSH_DIR/managers/zinit.zsh" ]]; then
+  source "$ZSH_DIR/managers/zinit.zsh"
+fi
+
+# Alternative (do NOT enable at the same time)
+# source "$ZSH_DIR/managers/zimfw.zsh"
+
+# --------------------------------------------------
+# 3. Load local machine overrides (not versioned)
+# --------------------------------------------------
+
+if [[ -r "$ZSH_DIR/local/override.zsh" ]]; then
+  source "$ZSH_DIR/local/override.zsh"
+fi
