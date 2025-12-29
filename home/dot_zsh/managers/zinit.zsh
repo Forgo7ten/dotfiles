@@ -106,8 +106,7 @@ zinit wait lucid light-mode for "${ld_plugins[@]}"
 # Use wait'!' to load after first prompt render.
 
 zinit ice depth=1; zinit light romkatv/powerlevel10k
-source $HOME/.zsh/.p10k.zsh
-
+[[ ! -f $HOME/.zsh/.p10k.zsh ]] || source $HOME/.zsh/.p10k.zsh
 
 # --------------------------------------------------
 # 4. 其他工具
@@ -118,3 +117,18 @@ source $HOME/.zsh/.p10k.zsh
 zinit light-mode for \
     id-as"local/direnv" atinit'command -v direnv >/dev/null || return 1' atload'eval "$(direnv hook zsh)"' \
     zdharma-continuum/null
+
+# SDKMAN 配置
+zinit ice wait"0" lucid id-as"sdkman" atload'
+  export SDKMAN_DIR="$HOME/.sdkman"
+  [[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
+'
+zinit light zdharma-continuum/null
+
+# NVM 配置
+zinit ice wait"0" lucid id-as"nvm" atload'
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+  [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+'
+zinit light zdharma-continuum/null
