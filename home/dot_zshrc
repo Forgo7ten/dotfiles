@@ -3,8 +3,8 @@
 # --------------------------------------------------
 # Machine-local pre profile
 # --------------------------------------------------
-if [[ -f "$HOME/.profile.before" ]]; then
-  source "$HOME/.profile.before"
+if [[ -f "$HOME/.pre_profile" ]]; then
+  source "$HOME/.pre_profile"
 fi
 
 # --------------------------------------------------
@@ -22,7 +22,16 @@ fi
 # --------------------------------------------------
 # Machine-local post profile
 # --------------------------------------------------
-if [[ -f "$HOME/.profile.after" ]]; then
-  source "$HOME/.profile.after"
+if [[ -f "$HOME/.post_profile" ]]; then
+  source "$HOME/.post_profile"
 fi
 
+
+# --------------------------------------------------
+# Load post-configuration (after all plugins)
+# --------------------------------------------------
+if [[ -f "$ZDOTDIR/zshrc.post.zsh" ]]; then
+  source "$ZDOTDIR/zshrc.post.zsh"
+fi
+
+# ---------------------- END -----------------------

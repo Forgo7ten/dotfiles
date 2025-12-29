@@ -21,6 +21,9 @@ fi
 
 source "$ZINIT_HOME/zinit.zsh"
 
+autoload -Uz _zinit
+(( ${+_comps} )) && _comps[zinit]=_zinit
+
 
 # --------------------------------------------------
 # 2. 初始化 Oh My Zsh
@@ -90,18 +93,11 @@ local -a ld_plugins=(
     # OMZP::z                  # z: 目录快速跳转
     # OMZP::autojump           # 目录跳转增强
     atinit'command -v zoxide >/dev/null && eval "$(zoxide init zsh)"' id-as"zoxide-init" zdharma-continuum/null # z: 目录快速跳转
-    zsh-users/zsh-autosuggestions     # 自动建议
-    zsh-users/zsh-completions         # 补全增强
-    # zsh-users/zsh-syntax-highlighting # 语法高亮
-    zdharma-continuum/fast-syntax-highlighting # 语法高亮
 )
 
 
 # 一次性交给 Zinit 加载
 zinit wait lucid light-mode for "${ld_plugins[@]}"
-
-# load direnv
-command -v direnv >/dev/null && eval "$(direnv hook zsh)"
 
 # --------------------------------------------------
 # 3. 初始化 Prompt / Theme
@@ -109,11 +105,16 @@ command -v direnv >/dev/null && eval "$(direnv hook zsh)"
 # Prompt should NOT block shell startup.
 # Use wait'!' to load after first prompt render.
 
-zinit snippet OMZT::robbyrussell
+zinit ice depth=1; zinit light romkatv/powerlevel10k
+source $HOME/.zsh/.p10k.zsh
+
 
 # --------------------------------------------------
-# Alternative prompts / themes
+# 4. 其他工具
 # --------------------------------------------------
-# zinit ice depth=1 atload"p10k reload"
-# zinit light romkatv/powerlevel10k
-# eval "$(starship init zsh)"
+
+
+# load direnv
+zinit light-mode for \
+    id-as"local/direnv" atinit'command -v direnv >/dev/null || return 1' atload'eval "$(direnv hook zsh)"' \
+    zdharma-continuum/null

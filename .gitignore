@@ -5,6 +5,4 @@ Thumbs.db
 # Editor config
 .vscode/
 
-# Chezmoi private files
-# Prevent accidental commit of private overrides if created in source
-home/dot_zsh/local/override.zsh
+examples/
