@@ -1,0 +1,46 @@
+# ~/.zsh/zshrc
+# Real Zsh entry point (managed by chezmoi)
+
+ZSH_DIR="$HOME/.zsh"
+
+# --------------------------------------------------
+# 1. Load core configuration (plugin-independent)
+# --------------------------------------------------
+
+# Load core configuration in stage order (00-bootstrap -> 10-env -> ...)
+# Using glob sort (n) to ensure numeric order
+for stage in $ZDOTDIR/core/[0-9][0-9]-*/**/*.zsh(Nn-.); do
+  source "$stage"
+done
+
+# --------------------------------------------------
+# 2. Load plugin manager (decided at template time)
+# --------------------------------------------------
+
+{{- $manager := .zsh.manager | default "zinit" -}}
+
+{{- if eq $manager "zinit" }}
+
+# Plugin manager: zinit
+[[ -r "$ZSH_DIR/managers/zinit.zsh" ]] && source "$ZSH_DIR/managers/zinit.zsh"
+
+{{- else if eq $manager "zimfw" }}
+
+# Plugin manager: zimfw
+[[ -r "$ZSH_DIR/managers/zimfw.zsh" ]] && source "$ZSH_DIR/managers/zimfw.zsh"
+
+{{- else if eq $manager "none" }}
+
+# Plugin manager: none (explicitly disabled)
+
+{{- else }}
+
+{{ fail (printf "Invalid zsh.manager value: %q (supported: zinit, zimfw, none)" $manager) }}
+
+{{- end }}
+
+# --------------------------------------------------
+# 3. Load local machine overrides
+# --------------------------------------------------
+
+[[ -r "$ZSH_DIR/local/override.zsh" ]] && source "$ZSH_DIR/local/override.zsh"
