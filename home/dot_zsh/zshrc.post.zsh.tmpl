@@ -1,0 +1,50 @@
+# ~/.zsh/zshrc_post
+# Post-configuration that runs after all plugins are loaded
+# This file is sourced at the very end of Zsh initialization
+
+# --------------------------------------------------
+# Manager-specific post-load configurations
+# --------------------------------------------------
+
+{{- $manager := .zsh.manager | default "zinit" -}}
+
+{{- if eq $manager "zinit" }}
+
+# Plugin manager: zinit #
+
+# 放在最后，加载用户所有的补全
+# zsh-completions: 补全
+# Aloxaf/fzf-tab: 拦截tab
+# fast-syntax-highlighting: 高亮
+# zsh-autosuggestions: 补全建议
+# zsh-history-substring-search: 不必输入命令开头就能使用⬆⬇查找历史命令
+zinit wait lucid for \
+ blockf \
+  zsh-users/zsh-completions \
+  atinit"ZINIT[COMPINIT_OPTS]=-C; zicompinit" \
+    Aloxaf/fzf-tab \
+    zdharma-continuum/fast-syntax-highlighting \
+ atload"!_zsh_autosuggest_start" \
+    zsh-users/zsh-autosuggestions \
+atload'
+  bindkey "^[[A" history-substring-search-up
+  bindkey "^[[B" history-substring-search-down
+  bindkey "$terminfo[kcuu1]" history-substring-search-up
+  bindkey "$terminfo[kcud1]" history-substring-search-down
+  bindkey -M vicmd "k" history-substring-search-up
+  bindkey -M vicmd "j" history-substring-search-down
+  zicdreplay
+' \
+  zsh-users/zsh-history-substring-search
+
+
+{{- else if eq $manager "zimfw" }}
+
+# Plugin manager: zimfw #
+
+
+{{- else }}
+
+{{ fail (printf "Invalid zsh.manager value: %q (supported: zinit, zimfw, none)" $manager) }}
+
+{{- end }}

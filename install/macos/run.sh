@@ -24,10 +24,7 @@ function initialize_os_macos() {
 }
 
 function install_packages(){
-    # 安装direnv
-    brew install direnv
-    # 安装zoxide
-    brew install zoxide
+    
 }
 
 

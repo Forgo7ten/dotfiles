@@ -33,10 +33,6 @@ function install_MesloLGS_ttf(){
 }
 
 function install_packages(){
-    # 安装direnv
-    sudo apt-get install direnv -y
-    # 安装zoxide
-    curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
     # 安装p10k字体 MesloLGS
     install_MesloLGS_ttf
 }
