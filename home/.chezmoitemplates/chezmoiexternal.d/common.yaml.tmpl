@@ -14,7 +14,7 @@
 
 "{{ $fontsPath }}/RobotoMono":
   type: "archive"
-  url: {{ gitHubLatestReleaseAssetURL "ryanoasis/nerd-fonts" "RobotoMono.zip" | quote }}
+  url: {{ gitHubLatestReleaseAssetURL "ryanoasis/nerd-fonts" "RobotoMono.tar.xz" | quote }}
   refreshPeriod: "720h"
   include: ["RobotoMonoNerdFont{,Mono}-{Regular,Bold,Italic,BoldItalic}.ttf"]
 
