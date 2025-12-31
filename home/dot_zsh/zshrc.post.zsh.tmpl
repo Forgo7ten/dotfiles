@@ -1,4 +1,4 @@
-# ~/.zsh/zshrc_post
+# ~/.zsh/zshrc.post.zsh
 # Post-configuration that runs after all plugins are loaded
 # This file is sourced at the very end of Zsh initialization
 
@@ -6,9 +6,9 @@
 # Manager-specific post-load configurations
 # --------------------------------------------------
 
-{{- $manager := .zsh.manager | default "zinit" -}}
+{{- $zshScheme := .zsh_scheme  -}}
 
-{{- if eq $manager "zinit" }}
+{{- if eq $zshScheme "zinit" }}
 
 # Plugin manager: zinit #
 
@@ -38,13 +38,13 @@ atload'
   zsh-users/zsh-history-substring-search
 
 
-{{- else if eq $manager "zimfw" }}
+{{- else if eq $zshScheme "zimfw" }}
 
 # Plugin manager: zimfw #
 
 
 {{- else }}
 
-{{ fail (printf "Invalid zsh.manager value: %q (supported: zinit, zimfw, none)" $manager) }}
+{{ fail (printf "Invalid zsh.manager value: %q (supported: zinit, zimfw, none)" $zshScheme) }}
 
 {{- end }}

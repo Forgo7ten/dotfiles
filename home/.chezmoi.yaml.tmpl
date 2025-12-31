@@ -1,3 +1,33 @@
+{{- $system := "" -}}
+{{- if hasKey . "system" -}}
+{{-   $system = .system -}}
+{{- /* Set client to the MacOS default system */ -}}
+{{- else if eq .chezmoi.os "darwin" -}}
+{{    $system = "client" -}}
+{{- else -}}
+{{-   $system = promptString "System (client or server)" "client" -}}
+{{- end -}}
+
+{{- /* 2. 处理 Git 用户名逻辑 */ -}}
+{{- $gitName := "" -}}
+{{- if (and (hasKey . "git") (hasKey .git "user_name")) -}}
+{{-   $gitName = .git.user_name -}}
+{{- else -}}
+{{-   $gitName = promptString "Git User Name" "Forgo7ten" -}}
+{{- end -}}
+
+{{- /* 3. 处理 Git 邮箱逻辑 */ -}}
+{{- $gitEmail := "" -}}
+{{- if (and (hasKey . "git") (hasKey .git "user_email")) -}}
+{{-   $gitEmail = .git.user_email -}}
+{{- else -}}
+{{-   $gitEmail = promptString "Git User Email" "email@gmail.com" -}}
+{{- end -}}
+
+
 data:
-  zsh:
-    manager: "zinit"
+  system: {{ $system | quote }}
+  zsh_scheme: "zinit"
+  git:
+    user_name: {{ $gitName | quote }}
+    user_email: {{ $gitEmail | quote }}
