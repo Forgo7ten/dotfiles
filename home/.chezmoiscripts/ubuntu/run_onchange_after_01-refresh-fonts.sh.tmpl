@@ -1,0 +1,21 @@
+{{ if eq .chezmoi.os "linux" -}}
+#!/bin/bash
+
+# 作用：当字体文件变动时自动刷新 Linux 字体缓存
+# 触发机制：监控 ~/.local/share/fonts 及其子目录的所有文件变化
+# 变化指纹：{{ output "ls" "-lR" (joinPath .chezmoi.homeDir ".local/share/fonts") | sha256sum }}
+
+set -e # 出错时立即退出
+
+# 确保目录存在（防止 ls 命令在初始安装时因找不到目录而报错）
+FONT_DIR="{{ joinPath .chezmoi.homeDir ".local/share/fonts" }}"
+if [ -d "$FONT_DIR" ]; then
+    echo "🚀 Detecting font changes in $FONT_DIR..."
+    echo "🔄 Running fc-cache to update system fonts..."
+    fc-cache -fv
+    echo "✅ Font cache updated successfully."
+else
+    echo "⚠️ Font directory $FONT_DIR does not exist. Skipping."
+fi
+
+{{ end -}}

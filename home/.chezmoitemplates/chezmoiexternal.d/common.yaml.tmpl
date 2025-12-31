@@ -1,0 +1,23 @@
+{{- $fontsPath := "" -}}
+{{- if eq .chezmoi.os "darwin" -}}
+{{-   $fontsPath = "Library/Fonts" -}}
+{{- else if eq .chezmoi.os "linux" -}}
+{{-   $fontsPath = ".local/share/fonts" -}}
+{{- end -}}
+
+{{- if $fontsPath }}
+
+"{{ $fontsPath }}/MesloLGS":
+  type: "archive"
+  url: {{ gitHubLatestReleaseAssetURL "romkatv/powerlevel10k-media" "meslo-lgs-nf.tar.gz" | quote }}
+  refreshPeriod: "720h"
+
+"{{ $fontsPath }}/RobotoMono":
+  type: "archive"
+  url: {{ gitHubLatestReleaseAssetURL "ryanoasis/nerd-fonts" "RobotoMono.zip" | quote }}
+  refreshPeriod: "720h"
+  include: ["RobotoMonoNerdFont{,Mono}-{Regular,Bold,Italic,BoldItalic}.ttf"]
+
+{{- end }}
+
+
