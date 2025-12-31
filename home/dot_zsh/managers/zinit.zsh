@@ -120,6 +120,12 @@ zinit ice depth=1; zinit light romkatv/powerlevel10k
 # 4. 其他工具
 # --------------------------------------------------
 
+## jq 处理json输出
+zinit wait"1" lucid for \
+  from"gh-r" as"program" mv"jq* -> jq" \
+  atclone"./jq --version" atpull"%atclone" \
+  jqlang/jq
+
 ## load zoxide: 'z' 目录快速跳转
 zinit wait"1" lucid for \
   from"gh-r" as"program" mv"zoxide* -> zoxide" \
