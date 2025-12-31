@@ -1,0 +1,7 @@
+{{ if eq .chezmoi.os "linux" -}}
+{{   if eq .chezmoi.osRelease.idLike "debian" -}}
+{{     include "../install/ubuntu/common/install-misc-packages.sh" }}
+{{   else -}}
+# 其他系统暂不执行
+{{   end -}}
+{{ end -}}
