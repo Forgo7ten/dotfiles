@@ -1,3 +1,4 @@
+{{- /* 设置机器类型 */ -}}
 {{- $system := "" -}}
 {{- if hasKey . "system" -}}
 {{-   $system = .system -}}
@@ -8,7 +9,7 @@
 {{-   $system = promptString "System (client or server)" "client" -}}
 {{- end -}}
 
-{{- /* 2. 处理 Git 用户名逻辑 */ -}}
+{{- /* 处理 Git 用户名逻辑 */ -}}
 {{- $gitName := "" -}}
 {{- if (and (hasKey . "git") (hasKey .git "user_name")) -}}
 {{-   $gitName = .git.user_name -}}
@@ -16,7 +17,7 @@
 {{-   $gitName = promptString "Git User Name" "Forgo7ten" -}}
 {{- end -}}
 
-{{- /* 3. 处理 Git 邮箱逻辑 */ -}}
+{{- /* 处理 Git 邮箱逻辑 */ -}}
 {{- $gitEmail := "" -}}
 {{- if (and (hasKey . "git") (hasKey .git "user_email")) -}}
 {{-   $gitEmail = .git.user_email -}}
@@ -24,9 +25,18 @@
 {{-   $gitEmail = promptString "Git User Email" "email@gmail.com" -}}
 {{- end -}}
 
+{{- /* 设置age解密是否启用 */ -}}
+{{- $useSecrets := true -}}
+{{- if hasKey . "use_secrets" -}}
+{{-   $useSecrets = .use_secrets -}}
+{{- else -}}
+{{-   $useSecrets = promptBool "是否在此设备启用敏感文件 (y or n)" true -}}
+{{- end -}}
 
+# --- 数据配置区 ---
 data:
   system: {{ $system | quote }}
+  use_secrets: {{ $useSecrets }}
   zsh_scheme: "zinit"
   git:
     user_name: {{ $gitName | quote }}
@@ -34,3 +44,11 @@ data:
 
 gitHub:
   refreshPeriod: 720h
+
+# --- age加密配置 ---
+{{- if $useSecrets }}
+encryption: "age"
+age:
+  identity: "~/.config/chezmoi/key.txt"
+  recipient: "age17amcunnqrumaaanyajp5vllcm9p0up49duz3jp9ghp3jxqtuwqyqvkvx70"
+{{- end }}

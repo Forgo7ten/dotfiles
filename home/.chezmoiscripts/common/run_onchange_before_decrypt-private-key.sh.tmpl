@@ -1,0 +1,14 @@
+{{- if .use_secrets -}}
+
+
+#!/bin/sh
+
+KEY_PATH="${HOME}/.config/chezmoi/key.txt"
+if [ ! -f "$KEY_PATH" ]; then
+    mkdir -p "${HOME}/.config/chezmoi"
+    chezmoi age decrypt --output "$KEY_PATH" --passphrase "{{ .chezmoi.sourceDir }}/.key.txt.age"
+    chmod 600 "$KEY_PATH"
+fi
+
+
+{{- end -}}
