@@ -33,6 +33,15 @@ autoload -Uz _zinit
 (( ${+_comps} )) && _comps[zinit]=_zinit
 
 
+## zinit附件
+zinit light-mode for \
+  zdharma-continuum/zinit-annex-bin-gem-node \
+  zdharma-continuum/zinit-annex-patch-dl \
+  zdharma-continuum/zinit-annex-readurl \
+  zdharma-continuum/zinit-annex-binary-symlink \
+  zdharma-continuum/zinit-annex-submods
+  # zdharma-continuum/zinit-annex-link-man 会顶替掉$MANPATH导致系统的找不到
+
 # --------------------------------------------------
 # 2. 初始化 Oh My Zsh
 # --------------------------------------------------
@@ -46,17 +55,19 @@ autoload -Uz _zinit
 # 2.1 初始化 OMZ lib
 # --------------------------------------------------
 
-zinit snippet OMZL::directories.zsh
-zinit snippet OMZL::functions.zsh
+zinit lucid light-mode for \
+    OMZL::directories.zsh \
+    OMZL::functions.zsh \
+    \
+    OMZL::clipboard.zsh \
+    OMZL::cli.zsh \
+    OMZL::correction.zsh \
+    OMZL::grep.zsh \
+    OMZL::history.zsh \
+    OMZL::key-bindings.zsh \
+    OMZL::misc.zsh \
+    OMZL::termsupport.zsh
 
-zinit snippet OMZL::clipboard.zsh 
-zinit snippet OMZL::cli.zsh 
-zinit snippet OMZL::correction.zsh 
-zinit snippet OMZL::grep.zsh 
-zinit snippet OMZL::history.zsh 
-zinit snippet OMZL::key-bindings.zsh 
-zinit snippet OMZL::misc.zsh 
-zinit snippet OMZL::termsupport.zsh 
 
 ##  omz主题会需要的东西，使用p10k可忽略
 # zinit snippet OMZL::async_prompt.zsh
@@ -115,35 +126,40 @@ zinit ice depth=1; zinit light romkatv/powerlevel10k
 # --------------------------------------------------
 
 ## jq 处理json输出
-zinit wait"1" lucid for \
-  from"gh-r" as"program" mv"jq* -> jq" \
+zinit light-mode wait"1" lucid from"gh-r" as"null" \
   atclone"./jq --version" atpull"%atclone" \
-  jqlang/jq
+  sbin"jq* -> jq" \
+  for jqlang/jq
 
 ## load zoxide: 'z' 目录快速跳转
-zinit wait"1" lucid for \
-  from"gh-r" as"program" mv"zoxide* -> zoxide" \
-  atclone'./zoxide init zsh > _zoxide.zsh' atpull'%atclone' \
-  pick"zoxide" src"_zoxide.zsh" \
-    ajeetdsouza/zoxide
+zinit light-mode wait"1" lucid from"gh-r" \
+  atclone"./zoxide init zsh > init.zsh" atpull"%atclone" \
+  sbin"zoxide" src"init.zsh" \
+  for ajeetdsouza/zoxide
 
 # load direnv
-zinit from"gh-r" as"program" mv"direnv* -> direnv" \
-  atclone'./direnv hook zsh > zhook.zsh' atpull'%atclone' \
-  pick"direnv" src="zhook.zsh" for \
-    direnv/direnv
+zinit light-mode from"gh-r" mv"direnv* -> direnv" \
+  atclone"./direnv hook zsh > zhook.zsh" atpull"%atclone" \
+  sbin"direnv" src"zhook.zsh" \
+  for direnv/direnv
 
 ## zsh vim模式
 #zinit ice depth=1
 #zinit light jeffreytse/zsh-vi-mode
 
-## fzf Ctrl+R 快速寻找
-zinit ice from"gh-r" as"program" pick"fzf" id-as"local/fzf-bin"
-zinit light junegunn/fzf
-zinit ice wait"0" lucid \
-  multisrc"shell/{completion,key-bindings}.zsh" \
-  pick"/dev/null" \
-  id-as"local/fzf-shell"
+## bat渲染
+zinit ice wait"1" lucid from"gh-r" as"null" \
+  atclone"cp -vf bat-*/autocomplete/bat.zsh _bat" atpull"%atclone" \
+  sbin"bat-*/bat -> bat" man"bat-*/bat.1"
+zinit light sharkdp/bat
+
+## fzf
+# Ctrl+R 快速寻找hisotry
+# Ctrl+R 快速寻找当前目录下文件
+# Alt+C  快速寻找当前目录下的目录
+zinit ice wait"1" lucid from"gh-r" \
+    atclone"./fzf --zsh > fzf-init.zsh" atpull"%atclone" \
+    sbin"fzf" src"fzf-init.zsh"
 zinit light junegunn/fzf
 
 # SDKMAN 配置
