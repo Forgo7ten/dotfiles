@@ -38,14 +38,17 @@ autoload -Uz _zinit
 # 2.1 初始化 OMZ lib
 # --------------------------------------------------
 
-# --------------------------------------------------
-# 2.1.1 Core / Required libs (SYNC)
-# --------------------------------------------------
-# These libs define OMZ runtime semantics.
-# They MUST be loaded synchronously and BEFORE plugins.
-
 zinit snippet OMZL::directories.zsh
 zinit snippet OMZL::functions.zsh
+
+zinit snippet OMZL::clipboard.zsh 
+zinit snippet OMZL::cli.zsh 
+zinit snippet OMZL::correction.zsh 
+zinit snippet OMZL::grep.zsh 
+zinit snippet OMZL::history.zsh 
+zinit snippet OMZL::key-bindings.zsh 
+zinit snippet OMZL::misc.zsh 
+zinit snippet OMZL::termsupport.zsh 
 
 ##  omz主题会需要的东西，使用p10k可忽略
 # zinit snippet OMZL::async_prompt.zsh
@@ -53,29 +56,12 @@ zinit snippet OMZL::functions.zsh
 # zinit snippet OMZL::prompt_info_functions.zsh
 # zinit snippet OMZL::theme-and-appearance.zsh
 # zinit snippet OMZL::vcs_info.zsh
-
-
-# --------------------------------------------------
-# 2.1.2 Extra / UX libs (ASYNC, Turbo mode)
-# --------------------------------------------------
-# These libs enhance UX but are NOT required for shell startup.
-# They are safe to load asynchronously after prompt is shown.
-
 ## 忽略掉的一些：
 # OMZL::compfix.zsh 用于检查目录权限，现代系统不需要
 # OMZL::completion.zsh 使用了 fzf-tab 和 zsh-completions，不再需要
 # OMZL::diagnostics.zsh 仅用于调试 OMZ
 # OMZL::spectrum.zsh 仅用于定义终端颜色变量
 
-zinit wait lucid for \
-  OMZL::clipboard.zsh \
-  OMZL::cli.zsh \
-  OMZL::correction.zsh \
-  OMZL::grep.zsh \
-  OMZL::history.zsh \
-  OMZL::key-bindings.zsh \
-  OMZL::misc.zsh \
-  OMZL::termsupport.zsh
 
 # --------------------------------------------------
 # 2.2 初始化 plugins
