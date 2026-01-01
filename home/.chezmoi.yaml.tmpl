@@ -45,6 +45,8 @@ data:
 gitHub:
   refreshPeriod: 720h
 
+# --- 默认umask ---
+umask: 0o022
 # --- age加密配置 ---
 {{- if $useSecrets }}
 encryption: "age"

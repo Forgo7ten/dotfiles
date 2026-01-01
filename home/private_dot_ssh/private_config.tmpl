@@ -1,0 +1,13 @@
+Host *
+  IgnoreUnknown UseKeychain,AddKeysToAgent
+  AddKeysToAgent yes
+
+  {{- if eq .chezmoi.os "darwin" }}
+  UseKeychain yes
+  {{- end }}
+
+
+# 引入外部配置 新增配置在~/.ssh/conf.d/目录编写
+Include conf.d/*.conf
+
+# ---------------------- END -----------------------
