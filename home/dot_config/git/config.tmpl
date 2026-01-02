@@ -1,0 +1,54 @@
+[init]
+	defaultBranch = main
+
+[alias]
+	co = checkout
+	br = branch
+	ci = commit
+	st = status
+	lg = log --graph --color --pretty=format:'%C(bold white)%h%Creset -%C(auto)%d%Creset %s %C(brightblack)(%cr)%Creset %C(bold blue)<%an>%Creset' --abbrev-commit --all
+	lp = log --graph --color --pretty=format:'%C(bold white)%h%Creset -%C(auto)%d%Creset %s %C(brightblack)(%cr)%Creset %C(bold blue)<%an>%Creset' --abbrev-commit --all --stat
+	ignore = "!gi() { curl -sL https://www.toptal.com/developers/gitignore/api/$@ ;}; gi"
+
+[user]
+	name = {{ .git.user_name | quote }}
+	email = {{ .git.user_email | quote }}
+{{- if .use_secrets }}
+	signingkey = {{ joinPath .chezmoi.homeDir ".ssh/id_ed25519.pub" | quote }}
+{{- end }}
+
+[color]
+	ui = auto
+
+[url "git@github.com:"]
+	pushinsteadof = https://github.com/
+
+[pager]
+	branch = cat
+	config = cat
+
+[pull]
+	rebase = true
+
+[core]
+	quotepath = false
+
+[rebase]
+	autoStash = true
+
+{{ if eq .chezmoi.os "linux" -}}
+[credential]
+	# 提示：确保安装了 Git Credential Manager 或相应辅助程序
+	credentialStore = cache
+{{ end -}}
+
+{{- if .use_secrets }}
+[gpg]
+	format = ssh
+
+[gpg "ssh"]
+	allowedSignersFile = {{ joinPath .chezmoi.homeDir ".config/git/allowed_signers" | quote }}
+
+[commit]
+	gpgsign = true
+{{- end }}
