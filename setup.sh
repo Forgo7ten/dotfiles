@@ -200,7 +200,7 @@ function run_chezmoi() {
     #     "${PRIVATE_DOTFILES_REPO_URL}"
 
     # purge the binary of the chezmoi cmd
-    rm -fv "${chezmoi_cmd}"
+    # rm -fv "${chezmoi_cmd}"
 }
 
 function initialize_dotfiles() {
