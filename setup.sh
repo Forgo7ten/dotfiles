@@ -191,12 +191,13 @@ function run_chezmoi() {
 
     # run `chezmoi init` for private dotfiles
     # Note: If `--config ~/.config/chezmoi/chezmoi.yaml` is not specified, it seems to use the same config file as the public dotfiles.
-    "${chezmoi_cmd}" init \
-        --apply \
-        --ssh \
-        --source "${PRIVATE_DOTFILES_PATH}" \
-        --config "${PRIVATE_DOTFILES_CONFIG_PATH}" \
-        "${PRIVATE_DOTFILES_REPO_URL}"
+    ## no private
+    # "${chezmoi_cmd}" init \
+    #     --apply \
+    #     --ssh \
+    #     --source "${PRIVATE_DOTFILES_PATH}" \
+    #     --config "${PRIVATE_DOTFILES_CONFIG_PATH}" \
+    #     "${PRIVATE_DOTFILES_REPO_URL}"
 
     # purge the binary of the chezmoi cmd
     rm -fv "${chezmoi_cmd}"
