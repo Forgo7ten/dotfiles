@@ -56,17 +56,17 @@ zinit light-mode for \
 # --------------------------------------------------
 
 zinit lucid light-mode for \
-    OMZL::directories.zsh \
-    OMZL::functions.zsh \
-    \
-    OMZL::clipboard.zsh \
-    OMZL::cli.zsh \
-    OMZL::correction.zsh \
-    OMZL::grep.zsh \
-    OMZL::history.zsh \
-    OMZL::key-bindings.zsh \
-    OMZL::misc.zsh \
-    OMZL::termsupport.zsh
+  OMZL::directories.zsh \
+  OMZL::functions.zsh \
+  \
+  OMZL::clipboard.zsh \
+  OMZL::cli.zsh \
+  OMZL::correction.zsh \
+  OMZL::grep.zsh \
+  OMZL::history.zsh \
+  OMZL::key-bindings.zsh \
+  OMZL::misc.zsh \
+  OMZL::termsupport.zsh
 
 
 ##  omz主题会需要的东西，使用p10k可忽略
@@ -125,6 +125,12 @@ zinit ice depth=1; zinit light romkatv/powerlevel10k
 # 4. 其他工具
 # --------------------------------------------------
 
+## age 加密工具
+zinit wait"1" lucid light-mode for \
+  from"gh-r" \
+  sbin"age/age; age/age-keygen; age/age-inspect; age/age-plugin-batchpass" \
+  FiloSottile/age
+
 ## jq 处理json输出
 zinit light-mode wait"1" lucid from"gh-r" as"null" \
   atclone"./jq --version" atpull"%atclone" \
@@ -158,8 +164,8 @@ zinit light sharkdp/bat
 # Ctrl+R 快速寻找当前目录下文件
 # Alt+C  快速寻找当前目录下的目录
 zinit ice wait"1" lucid from"gh-r" \
-    atclone"./fzf --zsh > fzf-init.zsh" atpull"%atclone" \
-    sbin"fzf" src"fzf-init.zsh"
+  atclone"./fzf --zsh > fzf-init.zsh" atpull"%atclone" \
+  sbin"fzf" src"fzf-init.zsh"
 zinit light junegunn/fzf
 
 # SDKMAN 配置
