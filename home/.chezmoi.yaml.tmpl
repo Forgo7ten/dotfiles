@@ -39,6 +39,8 @@ data:
   use_secrets: {{ $useSecrets }}
   zsh_scheme: "zinit"
   git:
+    # git commit/tag sign (gpg or ssh)
+    signing_method: "gpg"
     user_name: {{ $gitName | quote }}
     user_email: {{ $gitEmail | quote }}
 

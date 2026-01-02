@@ -14,7 +14,17 @@
 	name = {{ .git.user_name | quote }}
 	email = {{ .git.user_email | quote }}
 {{- if .use_secrets }}
+	{{- if eq .git.signing_method "gpg" }}
+
+	{{- $gpgIdPath := joinPath .chezmoi.homeDir ".gnupg/gpg-id" -}}
+
+	{{- if stat $gpgIdPath }}
+	signingkey = {{ include $gpgIdPath | trim | quote }}
+	{{- end }}
+
+	{{- else }}
 	signingkey = {{ joinPath .chezmoi.homeDir ".ssh/id_ed25519.pub" | quote }}
+	{{- end }}
 {{- end }}
 
 [color]
@@ -43,12 +53,26 @@
 {{ end -}}
 
 {{- if .use_secrets }}
+[commit]
+	gpgsign = true
+
+[tag]
+	gpgsign = true
+
+    {{- if eq .git.signing_method "gpg" }}
+
+# --- GPG 模式配置 ---
+[gpg]
+	format = openpgp
+
+    {{- else }}
+# --- SSH 模式配置 ---
 [gpg]
 	format = ssh
 
 [gpg "ssh"]
 	allowedSignersFile = {{ joinPath .chezmoi.homeDir ".config/git/allowed_signers" | quote }}
 
-[commit]
-	gpgsign = true
+    {{- end }}
+
 {{- end }}
