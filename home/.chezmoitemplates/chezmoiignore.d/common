@@ -1,5 +1,11 @@
+; 加密配置
+.key.txt.age
+{{- if not .use_secrets }}
+# 如果未启用解密，忽略所有以 .age 结尾的文件
+**/*.age
+{{- end }}
+
 com.googlecode.iterm2.plist
 plugin.jupyterlab-settings
-.key.txt.age
 
 .config/sheldon/plugin_sources
