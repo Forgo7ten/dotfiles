@@ -8,15 +8,17 @@
 
 -    方式 1: 使用 curl
 
-    ```bash
-    bash -c "$(curl -fsLS https://raw.githubusercontent.com/Forgo7ten/dotfiles/main/setup.sh)"
-    ```
+```bash
+bash -c "$(curl -fsLS https://raw.githubusercontent.com/Forgo7ten/dotfiles/main/setup.sh)"
+```
 
--   方式 2: 使用 wget
+-    方式 2: 使用 wget
 
-    ```bash
-    bash -c "$(wget -qO - https://raw.githubusercontent.com/Forgo7ten/dotfiles/main/setup.sh)"
-    ```
+```bash
+bash -c "$(wget -qO - https://raw.githubusercontent.com/Forgo7ten/dotfiles/main/setup.sh)"
+```
+
+
 
 ...
 
