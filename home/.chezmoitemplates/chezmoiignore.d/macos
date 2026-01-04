@@ -3,3 +3,5 @@
 
 .zsh/core/40-behavior/linux.zsh
 .zsh/local/os/linux.zsh
+
+.config/ghostty/linux.config

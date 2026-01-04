@@ -1,0 +1,18 @@
+# --- 公共基础配置 ---
+
+# 关闭窗口时不弹出确认框
+confirm-close-surface = false
+
+## 选中及复制
+# ubuntu需要用鼠标中键粘贴
+copy-on-select = true
+
+
+# --- 平台特定文件加载 ---
+{{ if eq .chezmoi.os "darwin" -}}
+# 仅在 macOS 上加载此文件
+config-file = macos.config
+{{ else if eq .chezmoi.os "linux" -}}
+# 仅在 Linux 上加载此文件
+config-file = linux.config
+{{ end -}}

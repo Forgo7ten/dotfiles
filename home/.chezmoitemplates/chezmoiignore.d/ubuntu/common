@@ -3,3 +3,5 @@ Library
 
 .zsh/core/40-behavior/macos.zsh
 .zsh/local/os/macos.zsh
+
+.config/ghostty/macos.config
