@@ -7,6 +7,7 @@
 	ci = commit
 	st = status
 	lg = log --graph --color --pretty=format:'%C(bold white)%h%Creset -%C(auto)%d%Creset %s %C(brightblack)(%cr)%Creset %C(bold blue)<%an>%Creset' --abbrev-commit --all
+	lg2 = log --graph --decorate --pretty=oneline --abbrev-commit --all
 	lp = log --graph --color --pretty=format:'%C(bold white)%h%Creset -%C(auto)%d%Creset %s %C(brightblack)(%cr)%Creset %C(bold blue)<%an>%Creset' --abbrev-commit --all --stat
 	ignore = "!gi() { curl -sL https://www.toptal.com/developers/gitignore/api/$@ ;}; gi"
 

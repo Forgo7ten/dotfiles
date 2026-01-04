@@ -1,0 +1,16 @@
+
+{{- if eq .chezmoi.os "darwin" -}}
+
+# Remove "downloaded from internet" quarantine attribute
+alias delnet="sudo xattr -r -d com.apple.quarantine ."
+
+# Tar without hidden files (like .DS_Store)
+alias tarc="tar --disable-copyfile --exclude='.DS_Store' -zcvf"
+
+# Sleep display immediately
+alias sleep_screen="pmset displaysleepnow"
+
+# Get IP address (en0)
+alias ip="ifconfig | grep -A 7 \"^en0\""
+
+{{- end }}

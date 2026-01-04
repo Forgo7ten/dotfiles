@@ -1,0 +1,100 @@
+
+{{- /* 配置 JADX */ -}}
+{{- if and (hasKey . "tools") (hasKey .tools "jadx_home") }}
+{{-   $jadxBin := printf "%s/bin/jadx" .tools.jadx_home -}}
+{{-   $jadxGui := printf "%s/bin/jadx-gui" .tools.jadx_home -}}
+{{-   if stat $jadxGui }}
+# JADX Configuration
+alias jadx="{{ $jadxBin }}"
+__JADX_EXE="{{ $jadxGui }}"
+
+function jad() {
+    if [ -z "$1" ]; then
+        nohup "$__JADX_EXE" >/dev/null 2>&1 &
+    else
+        nohup "$__JADX_EXE" "$1" >/dev/null 2>&1 &
+    fi
+}
+_jad() {
+    _files -g "*.{apk,dex,jar}"
+}
+
+{{-   end }}
+{{- end }}
+
+{{- /* 配置 JEB */ -}}
+{{- if and (hasKey . "tools") (hasKey .tools "jeb_home") (eq .chezmoi.os "darwin") }}
+{{-   $jebExe := printf "%s/jeb_macos.sh" .tools.jeb_home -}}
+{{-   if stat $jebExe }}
+# JEB Configuration
+__JEB_EXE="{{ $jebExe }}"
+
+function jeb() {
+    if [ -z "$1" ]; then
+        nohup "$__JEB_EXE" >/dev/null 2>&1 &
+    else
+        nohup "$__JEB_EXE" "$1" >/dev/null 2>&1 &
+    fi
+}
+_jeb() {
+    _files -g "*.{apk,dex,jar,jdb2}"
+}
+
+{{-   end }}
+{{- end }}
+
+{{- /* 配置 IDA */ -}}
+{{- if and (hasKey . "tools") (hasKey .tools "ida_home") }}
+{{-   $idaExePath := "" -}}
+{{-   if eq .chezmoi.os "darwin" -}}
+{{-     $idaExePath = printf "%s/Contents/MacOS/ida" .tools.ida_home -}}
+{{-   else -}}
+{{-     $idaExePath = printf "%s/ida" .tools.ida_home -}}
+{{-   end }}
+{{-   if stat $idaExePath }}
+# IDA Configuration
+__IDA_EXE="{{ $idaExePath }}"
+
+function ida() {
+    if [ -z "$1" ]; then
+        nohup "$__IDA_EXE" >/dev/null 2>&1 &
+    else
+        nohup "$__IDA_EXE" "$1" >/dev/null 2>&1 &
+    fi
+}
+_ida() {
+    # 匹配指定后缀 或 无后缀文件(排除带点文件)
+    _files -g "*.{so,exe,i64}" -g "^*.*"
+}
+{{-   end }}
+{{- end }}
+
+function pkg(){
+    aapt dump badging $1 | grep "package: name"
+}
+_pkg() {
+    _files -g "*.apk"
+}
+
+## 注册补全
+{{- $zshScheme := .zsh_scheme  -}}
+{{- if and (eq .chezmoi.os "darwin") (eq .zshScheme "zinit") }}
+.zinit-tmp-subst-on
+{{- end }}
+
+if command -v pkg >/dev/null; then
+    compdef _pkg pkg
+fi
+if command -v jad >/dev/null; then
+    compdef _jad jad
+fi
+if command -v jeb >/dev/null; then
+    compdef _jeb jeb
+fi
+if command -v ida >/dev/null; then
+    compdef _ida ida
+fi
+
+{{- if and (eq .chezmoi.os "darwin") (eq .zshScheme "zinit") }}
+.zinit-tmp-subst-off
+{{- end }}

@@ -1,0 +1,14 @@
+{{- if eq .chezmoi.os "linux" -}}
+
+# Linux
+# Get IP address (eth0)
+alias ip="ifconfig | grep -A 7 \"^eth0\""
+
+alias pc="proxychains"
+
+{{-   if (and (hasKey .chezmoi "osRelease") (eq .chezmoi.osRelease.id "ubuntu")) }}
+# Ubuntu specific
+alias openit='nautilus . &' # open .
+{{-   end }}
+
+{{- end }}

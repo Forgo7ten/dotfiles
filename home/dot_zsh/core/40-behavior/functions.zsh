@@ -11,6 +11,7 @@ proxy_on() {
     
     echo "✅ Proxy ON: $addr"
 }
+fregister "proxy_on" "设置代理(默认127.0.0.1:7897)"
 
 ## 清除代理
 proxy_off() {
@@ -18,6 +19,39 @@ proxy_off() {
     echo "❌ Proxy OFF"
 }
 alias unproxy='proxy_off'
+fregister "proxy_off/unproxy" "清除代理"
+
+## 封装nohup
+mynohup() {
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: mynohup <command> [args...]"
+        return 1
+    fi
+
+    local temp_dir="${TMPDIR:-/tmp}"
+    temp_dir="${temp_dir%/}/"
+    
+    local cmd_name=$(basename "$1")
+    local current_timestamp=$(date +%Y%m%d_%H%M%S)
+    local nohup_log="${temp_dir}nohup_${cmd_name}_${current_timestamp}.log"
+    
+    nohup "$@" > "$nohup_log" 2>&1 &
+    
+    local pid=$!
+    
+    echo "------------------------------------------"
+    echo "Process started in background."
+    echo "Command:  $*"
+    echo "PID:      $pid"
+    echo "Log file: $nohup_log"
+    echo "------------------------------------------"
+    
+    sleep 0.5
+    if ! kill -0 $pid 2>/dev/null; then
+        echo "Warning: Process $pid seems to have exited immediately. Check the log."
+    fi
+}
+fregister "mynohup" "在后台运行命令并输出日志到临时文件"
 
 ## git commit browser with fzf
 glf() {
@@ -30,4 +64,26 @@ glf() {
       --bind "ctrl-d:change-preview(echo {} | grep -o '[a-f0-9]\{7\}' | head -1 | xargs git show --color=always --name-only)" \
       --preview-window=right:60%
 }
+fregister "glf" "git log browser with fzf"
 
+# -----------------------------------------------------------------------------
+# Python Helpers
+# -----------------------------------------------------------------------------
+
+# Get local IP address via Python
+alias pyip="python3 -c \"import socket;print([(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1])\""
+fregister "pyip" "获取本地IP地址"
+
+# Get current time via Python
+alias pytime="python3 -c \"import datetime; print(datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'))\""
+fregister "pytime" "获取当前时间"
+
+## 快速开启python http服务
+pyhttp(){
+    # 如果没有传入端口号，使用默认端口7788
+    local port=${1:-7788}
+
+    echo "启动 Python HTTP 服务器，监听端口 $port..."
+    python3 -m http.server "$port"
+}
+fregister "pyhttp" "快速开启python http服务"

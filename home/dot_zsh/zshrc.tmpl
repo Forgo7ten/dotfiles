@@ -40,7 +40,15 @@ done
 {{- end }}
 
 # --------------------------------------------------
-# 3. Load local machine overrides
+# 3. Load core configuration (plugin-dependent)
+# --------------------------------------------------
+
+for stage in $ZDOTDIR/core.post/[0-9][0-9]-*/**/*.zsh(Nn-.); do
+  source "$stage"
+done
+
+# --------------------------------------------------
+# 4. Load local machine overrides
 # --------------------------------------------------
 
 [[ -r "$ZSH_DIR/local/override.zsh" ]] && source "$ZSH_DIR/local/override.zsh"

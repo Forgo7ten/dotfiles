@@ -33,6 +33,52 @@
 {{-   $useSecrets = promptBool "是否在此设备启用敏感文件 (y or n)" true -}}
 {{- end -}}
 
+
+{{- /* 工具路径 预定义 */ -}}
+
+{{- $ndkVersion := "27.0.12077973" -}}
+{{- $buildtoolsVersion := "30.0.3" -}}
+{{- $jebHome := joinPath .chezmoi.homeDir "Asoftwares/JEB" -}}
+{{- $jadxHome := joinPath .chezmoi.homeDir "Asoftwares/jadx" -}}
+{{- $idaHome := "" -}}
+
+{{- /* 设置AndroidSdk */ -}}
+{{- if and (hasKey . "tools") (hasKey .tools "andorid_sdk_ndk_version") -}}
+{{-   $ndkVersion = .tools.andorid_sdk_ndk_version -}}
+{{- else -}}
+{{-   $ndkVersion = promptString "Ndk version for Android Sdk" $ndkVersion -}}
+{{- end -}}
+{{- if and (hasKey . "tools") (hasKey .tools "android_sdk_buildtools_version") -}}
+{{-   $buildtoolsVersion = .tools.android_sdk_buildtools_version -}}
+{{- else -}}
+{{-   $buildtoolsVersion = promptString "Buildtools version for Android Sdk" $buildtoolsVersion -}}
+{{- end -}}
+
+{{- if eq .chezmoi.os "darwin" }}
+
+{{- /* 配置 JEB_HOME */ -}}
+{{- if and (hasKey . "tools") (hasKey .tools "jeb_home") -}}
+{{-   $jebHome = .tools.jeb_home -}}
+{{- else -}}
+{{-   $jebHome = promptString "JEB Home Path" $jebHome -}}
+{{- end -}}
+
+{{- /* 配置 JADX_HOME */ -}}
+{{- if and (hasKey . "tools") (hasKey .tools "jadx_home") -}}
+{{-   $jadxHome = .tools.jadx_home -}}
+{{- else -}}
+{{-   $jadxHome = promptString "JADX Home Path" $jadxHome -}}
+{{- end -}}
+
+{{- /* 配置 IDA_HOME */ -}}
+{{- if and (hasKey . "tools") (hasKey .tools "ida_home") -}}
+{{-   $idaHome = .tools.ida_home -}}
+{{- else -}}
+{{-   $idaHome = promptString "IDA Home Path" "/Applications/IDA Professional 9.2.app" -}}
+{{- end -}}
+
+{{- end }}
+
 # --- 数据配置区 ---
 data:
   system: {{ $system | quote }}
@@ -43,6 +89,13 @@ data:
     signing_method: "gpg"
     user_name: {{ $gitName | quote }}
     user_email: {{ $gitEmail | quote }}
+  tools:
+    jeb_home: {{ $jebHome | quote }}
+    jadx_home: {{ $jadxHome | quote }}
+    ida_home: {{ $idaHome | quote }}
+    andorid_sdk_ndk_version: {{ $ndkVersion | quote }}
+    android_sdk_buildtools_version: {{ $buildtoolsVersion | quote }}
+
 
 gitHub:
   refreshPeriod: 720h

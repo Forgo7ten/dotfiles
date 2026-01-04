@@ -1,4 +1,5 @@
 .profile
 .bashrc
 
+.zsh/core/40-behavior/linux.zsh
 .zsh/local/os/linux.zsh
