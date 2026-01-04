@@ -11,3 +11,5 @@ alias lg="ll | grep"
 alias nvi="nvim"
 alias vi="nvim"
 
+## zellij创建session
+alias za="zellij a -c"

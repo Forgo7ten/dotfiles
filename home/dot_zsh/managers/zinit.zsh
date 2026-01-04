@@ -168,6 +168,11 @@ zinit ice wait"1" lucid from"gh-r" \
   sbin"fzf" src"fzf-init.zsh"
 zinit light junegunn/fzf
 
+## zellij Session Manager
+zinit light-mode wait"1" lucid from"gh-r" as"null" \
+  sbin"zellij* -> zellij" \
+  for zellij-org/zellij
+
 # SDKMAN 配置
 zinit ice wait"1" lucid id-as"local/sdkman" atload'
   export SDKMAN_DIR="$HOME/.sdkman"
