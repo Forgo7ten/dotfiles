@@ -173,12 +173,19 @@ zinit light-mode wait"1" lucid from"gh-r" as"null" \
   sbin"zellij* -> zellij" \
   for zellij-org/zellij
 
+## mise
+zinit light-mode wait"1" lucid from"gh-r" \
+  mv"mise* -> mise" \
+  atclone"./mise completion zsh > _mise; ./mise activate zsh | sed 's#\./mise#mise#g' > mise-init.zsh" atpull"%atclone" \
+  sbin"mise" src"mise-init.zsh" \
+  for jdx/mise
+
 # SDKMAN 配置
-zinit ice wait"1" lucid id-as"local/sdkman" atload'
-  export SDKMAN_DIR="$HOME/.sdkman"
-  [[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
-'
-zinit light zdharma-continuum/null
+# zinit ice wait"1" lucid id-as"local/sdkman" atload'
+#   export SDKMAN_DIR="$HOME/.sdkman"
+#   [[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
+# '
+# zinit light zdharma-continuum/null
 
 # NVM 配置
 zinit ice wait"1" lucid id-as"local/nvm" atload'
