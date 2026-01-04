@@ -9,6 +9,9 @@ alias pc="proxychains"
 {{-   if (and (hasKey .chezmoi "osRelease") (eq .chezmoi.osRelease.id "ubuntu")) }}
 # Ubuntu specific
 alias openit='nautilus . &' # open .
+
+# 传递环境变量（代理）
+alias pacst='sudo -E pacstall'
 {{-   end }}
 
 {{- end }}
