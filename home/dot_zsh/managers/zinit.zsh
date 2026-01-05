@@ -125,17 +125,12 @@ zinit ice depth=1; zinit light romkatv/powerlevel10k
 # 4. 其他工具
 # --------------------------------------------------
 
-## age 加密工具
-zinit wait"1" lucid light-mode as"null" \
-  from"gh-r" \
-  sbin"age/age; age/age-keygen; age/age-inspect; age/age-plugin-batchpass" \
-  for FiloSottile/age
-
-## jq 处理json输出
-zinit light-mode wait"1" lucid from"gh-r" as"null" \
-  atclone"./jq --version" atpull"%atclone" \
-  sbin"jq* -> jq" \
-  for jqlang/jq
+## mise二进制管理
+zinit light-mode wait"0" lucid from"gh-r" as"null" \
+  mv"mise* -> mise" \
+  atclone"./mise completion zsh > _mise; ./mise activate zsh | sed 's#\./mise#mise#g' > .mise-init.zsh; mise use -g usage" atpull"%atclone" \
+  sbin"mise" src".mise-init.zsh" \
+  for jdx/mise
 
 ## load zoxide: 'z' 目录快速跳转
 zinit light-mode wait"1" lucid from"gh-r" as"null" \
@@ -153,12 +148,6 @@ zinit light-mode from"gh-r" mv"direnv* -> direnv" as"null" \
 #zinit ice depth=1
 #zinit light jeffreytse/zsh-vi-mode
 
-## bat渲染
-zinit ice wait"1" lucid from"gh-r" as"null" \
-  atclone"cp -vf bat-*/autocomplete/bat.zsh _bat" atpull"%atclone" \
-  sbin"bat-*/bat -> bat" man"bat-*/bat.1"
-zinit light sharkdp/bat
-
 ## fzf
 # Ctrl+R 快速寻找hisotry
 # Ctrl+R 快速寻找当前目录下文件
@@ -168,24 +157,6 @@ zinit ice wait"1" lucid from"gh-r" as"null" \
   sbin"fzf" src"fzf-init.zsh"
 zinit light junegunn/fzf
 
-## zellij Session Manager
-zinit light-mode wait"1" lucid from"gh-r" as"null" \
-  atclone"./zellij setup --generate-completion zsh > _zellij" atpull"%atclone" \
-  sbin"zellij* -> zellij" \
-  for zellij-org/zellij
-
-## 安装uv
-zinit ice wait"1" lucid from"gh-r" as"null" \
-  atclone"./uv-*/uv generate-shell-completion zsh > _uv" atpull"%atclone" \
-  sbin"uv-*/uv; uv-*/uvx"
-zinit light astral-sh/uv
-
-## mise
-zinit light-mode wait"1" lucid from"gh-r" as"null" \
-  mv"mise* -> mise" \
-  atclone"./mise completion zsh > _mise; ./mise activate zsh | sed 's#\./mise#mise#g' > .mise-init.zsh; mise use -g usage" atpull"%atclone" \
-  sbin"mise" src".mise-init.zsh" \
-  for jdx/mise
 
 ## SDKMAN 配置
 # zinit ice wait"1" lucid id-as"local/sdkman" atload'
