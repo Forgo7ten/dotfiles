@@ -1,0 +1,57 @@
+# =============================================================================
+# MISE GLOBAL CONFIGURATION (~/.config/mise/config.toml)
+# =============================================================================
+
+[tools]
+# --- Core Languages & Runtimes ---
+go     = "latest"
+node   = "lts"
+python = "3.11"
+java   = "temurin-17"
+# rust = "latest"        # 按需开启，建议配合 rustup 使用或由 mise 托管
+
+# --- Shell 工具 ---
+uv      = "latest"       # Python包管理
+eza     = "latest"       # ls 的现代替代品
+yazi    = "latest"       # 终端文件管理器
+usage   = "latest"       # mise 专用：生成 CLI 补全规格说明
+jq      = "latest"       # 命令行 JSON 处理器
+chezmoi = "latest"       # Dotfiles 跨设备同步工具
+bat     = "latest"       # cat替代品
+zellij  = "latest"       # Shell Session Management
+
+
+# --- Security & Secrets Management ---
+age     = "latest"       # 文件加密
+dotenvx = "latest"       # 跨平台环境变量加密与加载
+
+# --- shell脚本检查 ---
+shellcheck = "latest"    # Shell 脚本静态检查
+shfmt      = "latest"    # Shell 脚本代码格式化
+bats       = "latest"    # Bash 自动化测试系统
+
+# --- Node包管理 ---
+"npm:bash-language-server" = "latest" # Bash LSP (LazyVim 补全必备)
+# "npm:@anthropic-ai/claude-code" = "latest" # Claude
+# "npm:@openai/codex" = "latest"            # codex
+
+# --- Git 仓库 ---
+"github:cli/cli"       = "latest" # GitHub 官方命令行工具 (gh)
+"github:x-motemen/ghq" = "latest" # 自动管理远程仓库的本地目录结构 (src/github.com/...)
+"github:d-kuro/gwq"    = "latest" # 增强型 Git Worktree 管理
+
+# =============================================================================
+# GLOBAL SETTINGS
+# =============================================================================
+
+[settings]
+# 自动识别 Python 社区标准版本文件 (如 .python-version)
+idiomatic_version_file_enable_tools = ["python"]
+
+# asdf_compat = true              # 开启对 .tool-versions 的兼容
+# jobs = 8                        # 并行安装任务数
+
+## 编译python（而不是下载预编译版本）
+#[settings.python]
+#compile = true
+
