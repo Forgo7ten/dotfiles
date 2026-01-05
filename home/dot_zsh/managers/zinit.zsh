@@ -138,15 +138,15 @@ zinit light-mode wait"1" lucid from"gh-r" as"null" \
   for jqlang/jq
 
 ## load zoxide: 'z' 目录快速跳转
-zinit light-mode wait"1" lucid from"gh-r" \
-  atclone"./zoxide init zsh > init.zsh" atpull"%atclone" \
-  sbin"zoxide" src"init.zsh" \
+zinit light-mode wait"1" lucid from"gh-r" as"null" \
+  atclone"./zoxide init zsh > zoxide-init.zsh" atpull"%atclone" \
+  sbin"zoxide" src"zoxide-init.zsh" \
   for ajeetdsouza/zoxide
 
 # load direnv
-zinit light-mode from"gh-r" mv"direnv* -> direnv" \
-  atclone"./direnv hook zsh > zhook.zsh" atpull"%atclone" \
-  sbin"direnv" src"zhook.zsh" \
+zinit light-mode from"gh-r" mv"direnv* -> direnv" as"null" \
+  atclone"./direnv hook zsh > direnv-hook.zsh" atpull"%atclone" \
+  sbin"direnv" src"direnv-hook.zsh" \
   for direnv/direnv
 
 ## zsh vim模式
@@ -163,7 +163,7 @@ zinit light sharkdp/bat
 # Ctrl+R 快速寻找hisotry
 # Ctrl+R 快速寻找当前目录下文件
 # Alt+C  快速寻找当前目录下的目录
-zinit ice wait"1" lucid from"gh-r" \
+zinit ice wait"1" lucid from"gh-r" as"null" \
   atclone"./fzf --zsh > fzf-init.zsh" atpull"%atclone" \
   sbin"fzf" src"fzf-init.zsh"
 zinit light junegunn/fzf
@@ -175,14 +175,13 @@ zinit light-mode wait"1" lucid from"gh-r" as"null" \
   for zellij-org/zellij
 
 ## 安装uv
-zinit ice wait"1" lucid from"gh-r" \
+zinit ice wait"1" lucid from"gh-r" as"null" \
   atclone"./uv-*/uv generate-shell-completion zsh > _uv" atpull"%atclone" \
   sbin"uv-*/uv; uv-*/uvx"
 zinit light astral-sh/uv
 
 ## mise
-zinit light-mode wait"1" lucid from"gh-r" \
-  as"plugin" pick"" \
+zinit light-mode wait"1" lucid from"gh-r" as"null" \
   mv"mise* -> mise" \
   atclone"./mise completion zsh > _mise; ./mise activate zsh | sed 's#\./mise#mise#g' > .mise-init.zsh; mise use -g usage" atpull"%atclone" \
   sbin"mise" src".mise-init.zsh" \
