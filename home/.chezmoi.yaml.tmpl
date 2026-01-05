@@ -22,7 +22,7 @@
 {{- if (and (hasKey . "git") (hasKey .git "user_email")) -}}
 {{-   $gitEmail = .git.user_email -}}
 {{- else -}}
-{{-   $gitEmail = promptString "Git User Email" "email@gmail.com" -}}
+{{-   $gitEmail = promptString "Git User Email" "some@users.noreply.github.com" -}}
 {{- end -}}
 
 {{- /* 设置age解密是否启用 */ -}}
