@@ -194,6 +194,12 @@ zinit light-mode wait"1" lucid from"gh-r" as"null" \
 # '
 # zinit light zdharma-continuum/null
 
+# thefuck 配置(不存在时忽略报错、不会自动安装)
+zinit wait'1' lucid light-mode for \
+  id-as"local/thefuck" \
+  atload'(( $+commands[thefuck] )) && eval $(thefuck --alias)' \
+  zdharma-continuum/null
+
 # NVM 配置
 zinit ice wait"1" lucid id-as"local/nvm" atload'
   export NVM_DIR="$HOME/.nvm"
@@ -201,9 +207,3 @@ zinit ice wait"1" lucid id-as"local/nvm" atload'
   [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 '
 zinit light zdharma-continuum/null
-
-# thefuck 配置(不存在时忽略报错、不会自动安装)
-zinit wait'1' lucid light-mode for \
-  id-as"local/thefuck" \
-  atload'(( $+commands[thefuck] )) && eval $(thefuck --alias)' \
-  zdharma-continuum/null
