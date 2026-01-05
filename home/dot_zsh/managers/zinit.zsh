@@ -76,6 +76,7 @@ zinit lucid light-mode for \
 # zinit snippet OMZL::git.zsh
 # zinit snippet OMZL::prompt_info_functions.zsh
 # zinit snippet OMZL::vcs_info.zsh
+# OMZL::theme-and-appearance.zsh # 加载ls颜色（延迟加载会顶替掉eza的别名）
 ## 忽略掉的一些：
 # OMZL::diagnostics.zsh 仅用于调试 OMZ
 # OMZL::spectrum.zsh 仅用于定义终端颜色变量
@@ -89,7 +90,6 @@ zinit lucid light-mode for \
 
 # 定义插件列表数组
 local -a ld_plugins=(
-  OMZL::theme-and-appearance.zsh # 加载ls颜色
   OMZP::git                # Git 基础增强
   OMZP::copypath           # copypath: 复制当前路径
   OMZP::copyfile           # copyfile: 复制文件内容到系统剪贴板
