@@ -170,6 +170,7 @@ zinit light junegunn/fzf
 
 ## zellij Session Manager
 zinit light-mode wait"1" lucid from"gh-r" as"null" \
+  atclone"./zellij setup --generate-completion zsh > _zellij" atpull"%atclone" \
   sbin"zellij* -> zellij" \
   for zellij-org/zellij
 
