@@ -75,7 +75,6 @@ zinit lucid light-mode for \
 # zinit snippet OMZL::async_prompt.zsh
 # zinit snippet OMZL::git.zsh
 # zinit snippet OMZL::prompt_info_functions.zsh
-# zinit snippet OMZL::theme-and-appearance.zsh
 # zinit snippet OMZL::vcs_info.zsh
 ## 忽略掉的一些：
 # OMZL::diagnostics.zsh 仅用于调试 OMZ
@@ -90,6 +89,7 @@ zinit lucid light-mode for \
 
 # 定义插件列表数组
 local -a ld_plugins=(
+  OMZL::theme-and-appearance.zsh # 加载ls颜色
   OMZP::git                # Git 基础增强
   OMZP::copypath           # copypath: 复制当前路径
   OMZP::copyfile           # copyfile: 复制文件内容到系统剪贴板
