@@ -25,6 +25,12 @@ zellij  = "latest"       # Shell Session Management
 age     = "latest"       # 文件加密
 dotenvx = "latest"       # 跨平台环境变量加密与加载
 
+# --- 系统特定 ---
+{{- if (and (eq .chezmoi.os "linux") (hasKey .chezmoi.osRelease "id") (eq .chezmoi.osRelease.id "ubuntu") (eq .chezmoi.osRelease.versionCodename "jammy")) }}
+tree-sitter = "0.22.6"   # need by LazyVim nvim-treesitter
+
+{{ end -}}
+
 # --- shell脚本检查 ---
 shellcheck = "latest"    # Shell 脚本静态检查
 shfmt      = "latest"    # Shell 脚本代码格式化
