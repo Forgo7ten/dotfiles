@@ -66,6 +66,8 @@ zinit lucid light-mode for \
   OMZL::history.zsh \
   OMZL::key-bindings.zsh \
   OMZL::misc.zsh \
+  OMZL::compfix.zsh \
+  OMZL::completion.zsh \
   OMZL::termsupport.zsh
 
 
@@ -76,8 +78,6 @@ zinit lucid light-mode for \
 # zinit snippet OMZL::theme-and-appearance.zsh
 # zinit snippet OMZL::vcs_info.zsh
 ## 忽略掉的一些：
-# OMZL::compfix.zsh 用于检查目录权限，现代系统不需要
-# OMZL::completion.zsh 使用了 fzf-tab 和 zsh-completions，不再需要
 # OMZL::diagnostics.zsh 仅用于调试 OMZ
 # OMZL::spectrum.zsh 仅用于定义终端颜色变量
 
@@ -126,10 +126,10 @@ zinit ice depth=1; zinit light romkatv/powerlevel10k
 # --------------------------------------------------
 
 ## age 加密工具
-zinit wait"1" lucid light-mode for \
+zinit wait"1" lucid light-mode as"null" \
   from"gh-r" \
   sbin"age/age; age/age-keygen; age/age-inspect; age/age-plugin-batchpass" \
-  FiloSottile/age
+  for FiloSottile/age
 
 ## jq 处理json输出
 zinit light-mode wait"1" lucid from"gh-r" as"null" \
