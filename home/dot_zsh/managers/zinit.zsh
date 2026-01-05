@@ -128,7 +128,7 @@ zinit ice depth=1; zinit light romkatv/powerlevel10k
 ## mise二进制管理
 zinit light-mode wait"0" lucid from"gh-r" as"null" \
   mv"mise* -> mise" \
-  atclone"./mise completion zsh > _mise; ./mise activate zsh | sed 's#\./mise#mise#g' > .mise-init.zsh; mise use -g usage" atpull"%atclone" \
+  atclone"./mise completion zsh > _mise; ./mise activate zsh | sed 's#\./mise#mise#g' > .mise-init.zsh" atpull"%atclone" \
   sbin"mise" src".mise-init.zsh" \
   for jdx/mise
 
