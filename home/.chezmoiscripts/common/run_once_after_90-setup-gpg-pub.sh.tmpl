@@ -1,0 +1,31 @@
+{{- if .use_secrets -}}
+#!/bin/bash
+
+set -eufo pipefail
+
+{{- $pubKeyPath := joinPath .chezmoi.homeDir ".gnupg/gpg-public-key.asc" }}
+# Public Key Hash: {{ if stat $pubKeyPath }}{{ include $pubKeyPath | sha256sum }}{{ else }}none{{ end }}
+PUBKEY_PATH="{{ $pubKeyPath }}"
+
+if [ -f "$PUBKEY_PATH" ]; then
+    echo "正在从源码目录导入 GPG 公钥..."
+    gpg --import "$PUBKEY_PATH"
+
+    # 3. 动态提取指纹 (40位完整指纹)
+    # 这样即使你更换了 Key，脚本依然能自动识别并设置信任
+    FPR=$(gpg --show-keys --with-colons --with-fingerprint "$PUBKEY_PATH" | awk -F: '/^fpr:/ {print $10; exit}')
+
+    if [ -n "$FPR" ]; then
+        echo "检测到指纹: $FPR"
+        echo "正在设置终极信任 (Ultimate Trust)..."
+        echo "${FPR}:6:" | gpg --import-ownertrust
+        echo "✅ GPG 身份及信任设置已完成！"
+    else
+        echo "⚠️ 警告：无法从公钥文件中提取指纹，请检查公钥格式。"
+    fi
+else
+    echo "❌ 错误：找不到公钥 $PUBKEY_PATH"
+    exit 0
+fi
+
+{{- end -}}

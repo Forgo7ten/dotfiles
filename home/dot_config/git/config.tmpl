@@ -17,10 +17,12 @@
 {{- if .use_secrets }}
 	{{- if eq .git.signing_method "gpg" }}
 
-	{{- $gpgIdPath := joinPath .chezmoi.homeDir ".gnupg/gpg-id" -}}
-
-	{{- if stat $gpgIdPath }}
-	signingkey = {{ include $gpgIdPath | trim | quote }}
+	{{- $gpgEncryptedPath := joinPath .chezmoi.sourceDir "private_dot_gnupg/encrypted_gpg-public-key.asc.age" -}}
+	{{- if stat $gpgEncryptedPath }}
+		{{- $gpgId := output "bash" "-c" (printf "chezmoi decrypt %s | gpg --show-keys --with-colons --with-fingerprint | awk -F: '/^fpr:/ {print substr($10, 25); exit}'" $gpgEncryptedPath) | trim -}}
+		{{- if $gpgId }}
+	signingkey = {{ $gpgId | quote }}
+		{{- end }}
 	{{- end }}
 
 	{{- else }}
@@ -60,13 +62,13 @@
 [tag]
 	gpgsign = true
 
-    {{- if eq .git.signing_method "gpg" }}
+	{{- if eq .git.signing_method "gpg" }}
 
 # --- GPG 模式配置 ---
 [gpg]
 	format = openpgp
 
-    {{- else }}
+	{{- else }}
 # --- SSH 模式配置 ---
 [gpg]
 	format = ssh
@@ -74,6 +76,6 @@
 [gpg "ssh"]
 	allowedSignersFile = {{ joinPath .chezmoi.homeDir ".config/git/allowed_signers" | quote }}
 
-    {{- end }}
+	{{- end }}
 
 {{- end }}
