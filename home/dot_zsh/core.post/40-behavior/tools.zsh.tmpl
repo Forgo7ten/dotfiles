@@ -78,7 +78,7 @@ _pkg() {
 
 ## 注册补全
 {{- $zshScheme := .zsh_scheme  -}}
-{{- if and (eq .chezmoi.os "darwin") (eq .zshScheme "zinit") }}
+{{- if and (eq .chezmoi.os "darwin") (eq $zshScheme "zinit") }}
 .zinit-tmp-subst-on
 {{- end }}
 
@@ -95,6 +95,6 @@ if command -v ida >/dev/null; then
     compdef _ida ida
 fi
 
-{{- if and (eq .chezmoi.os "darwin") (eq .zshScheme "zinit") }}
+{{- if and (eq .chezmoi.os "darwin") (eq $zshScheme "zinit") }}
 .zinit-tmp-subst-off
 {{- end }}
