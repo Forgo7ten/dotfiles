@@ -180,10 +180,11 @@ zinit ice wait"1" lucid from"gh-r" \
 zinit light astral-sh/uv
 
 ## mise
-zinit light-mode wait"1" lucid from"gh-r" as"null" \
+zinit light-mode wait"1" lucid from"gh-r" \
+  as"plugin" pick"" \
   mv"mise* -> mise" \
-  atclone"./mise completion zsh > _mise; ./mise activate zsh | sed 's#\./mise#mise#g' > -mise-init" atpull"%atclone" \
-  sbin"mise" src"-mise-init" \
+  atclone"./mise completion zsh > _mise; ./mise activate zsh | sed 's#\./mise#mise#g' > .mise-init.zsh; mise use -g usage" atpull"%atclone" \
+  sbin"mise" src".mise-init.zsh" \
   for jdx/mise
 
 ## SDKMAN 配置
