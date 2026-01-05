@@ -1,0 +1,26 @@
+#!/bin/sh
+
+KEY_PATH="${HOME}/.config/chezmoi/key.txt"
+
+{{- if .use_secrets }}
+
+# fingerprint: {{ (print (stat .chezmoi.configFile) "\n" (include .chezmoi.configFile)) | sha256sum }}
+
+if [ ! -f "$KEY_PATH" ]; then
+    mkdir -p "${HOME}/.config/chezmoi"
+    chezmoi age decrypt --output "$KEY_PATH" --passphrase "{{ .chezmoi.sourceDir }}/.key.txt.age"
+    chmod 600 "$KEY_PATH"
+fi
+
+{{- else }}
+# --- 禁用 Secret 逻辑 ---
+
+if [ -f "$KEY_PATH" ]; then
+    echo "检测到 use_secrets=false，正在清理密钥文件以确保安全..."
+    rm -f "$KEY_PATH"
+    echo "🗑️ 密钥文件已删除"
+else
+    echo "密钥文件不存在，无需清理"
+fi
+
+{{- end -}}
