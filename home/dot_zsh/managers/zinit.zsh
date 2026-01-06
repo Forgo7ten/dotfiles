@@ -126,22 +126,22 @@ zinit ice depth=1; zinit light romkatv/powerlevel10k
 # --------------------------------------------------
 
 ## mise二进制管理
-zinit light-mode wait"0" lucid from"gh-r" as"null" \
+zinit light-mode wait"0" lucid from"gh-r" \
   mv"mise* -> mise" \
   atclone"./mise completion zsh > _mise; ./mise activate zsh | sed 's#\./mise#mise#g' > .mise-init.zsh" atpull"%atclone" \
-  sbin"mise" src".mise-init.zsh" \
+  sbin"mise" pick".mise-init.zsh" \
   for jdx/mise
 
 ## load zoxide: 'z' 目录快速跳转
-zinit light-mode wait"1" lucid from"gh-r" as"null" \
+zinit light-mode wait"1" lucid from"gh-r" \
   atclone"./zoxide init zsh > zoxide-init.zsh" atpull"%atclone" \
-  sbin"zoxide" src"zoxide-init.zsh" \
+  sbin"zoxide" pick"/dev/null" src"zoxide-init.zsh" \
   for ajeetdsouza/zoxide
 
 # load direnv
-zinit light-mode from"gh-r" mv"direnv* -> direnv" as"null" \
+zinit light-mode from"gh-r" mv"direnv* -> direnv" \
   atclone"./direnv hook zsh > direnv-hook.zsh" atpull"%atclone" \
-  sbin"direnv" src"direnv-hook.zsh" \
+  sbin"direnv" pick"direnv-hook.zsh" \
   for direnv/direnv
 
 ## zsh vim模式
@@ -152,9 +152,9 @@ zinit light-mode from"gh-r" mv"direnv* -> direnv" as"null" \
 # Ctrl+R 快速寻找hisotry
 # Ctrl+R 快速寻找当前目录下文件
 # Alt+C  快速寻找当前目录下的目录
-zinit ice wait"1" lucid from"gh-r" as"null" \
+zinit ice wait"1" lucid from"gh-r" \
   atclone"./fzf --zsh > fzf-init.zsh" atpull"%atclone" \
-  sbin"fzf" src"fzf-init.zsh"
+  sbin"fzf" pick"fzf-init.zsh"
 zinit light junegunn/fzf
 
 
