@@ -119,7 +119,7 @@ zinit wait lucid light-mode for "${ld_plugins[@]}"
 # zinit load romkatv/gitstatus
 
 zinit ice depth=1; zinit light romkatv/powerlevel10k
-[[ ! -f $HOME/.zsh/.p10k.zsh ]] || source $HOME/.zsh/.p10k.zsh
+[[ ! -f $HOME/.config/powerlevel10k/p10k.zsh ]] || source $HOME/.config/powerlevel10k/p10k.zsh
 
 # --------------------------------------------------
 # 4. 其他工具
