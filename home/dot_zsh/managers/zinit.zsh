@@ -39,8 +39,8 @@ zinit light-mode for \
   zdharma-continuum/zinit-annex-patch-dl \
   zdharma-continuum/zinit-annex-readurl \
   zdharma-continuum/zinit-annex-binary-symlink \
-  zdharma-continuum/zinit-annex-submods
-  # zdharma-continuum/zinit-annex-link-man 会顶替掉$MANPATH导致系统的找不到
+  zdharma-continuum/zinit-annex-submods \
+  zdharma-continuum/zinit-annex-link-man
 
 # --------------------------------------------------
 # 2. 初始化 Oh My Zsh
@@ -126,10 +126,12 @@ zinit ice depth=1; zinit light romkatv/powerlevel10k
 # --------------------------------------------------
 
 ## mise二进制管理
-zinit light-mode from"gh-r" \
-  mv"mise* -> mise" \
-  atclone"./mise completion zsh > _mise; ./mise activate zsh | sed 's#\./mise#mise#g' > .mise-init.zsh" atpull"%atclone" \
-  sbin"mise" pick".mise-init.zsh" \
+zinit from"gh-r" bpick"*(linux|macos)-(x64|arm64).tar.xz" \
+  mv"mise/* -> ." \
+  atclone'rmdir mise; export PATH="$PWD/bin:$PATH"; mise completion zsh > _mise' atpull"%atclone" \
+  lman \
+  atload'eval "$(mise activate zsh)"' \
+  sbin"bin/mise" pick"/dev/null" \
   for jdx/mise
 
 ## load zoxide: 'z' 目录快速跳转
