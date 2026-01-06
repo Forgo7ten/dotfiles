@@ -12,7 +12,32 @@ function jad() {
     if [ -z "$1" ]; then
         nohup "$__JADX_EXE" >/dev/null 2>&1 &
     else
-        nohup "$__JADX_EXE" "$1" >/dev/null 2>&1 &
+        local temp_dir="${TMPDIR:-/tmp}"
+        temp_dir="${temp_dir%/}/"
+        
+        # 兼容性更好的获取最后一个参数的方法
+        local last_arg="${@[-1]}" 
+        local extra_args=()
+
+        if [ -f "$last_arg" ]; then
+            local full_path="${last_arg:A}"
+            local safe_name="${full_path//[^a-zA-Z0-9]/_}"
+            
+            # 如果路径太长，截断并保留末尾
+            if [ ${#safe_name} -gt 150 ]; then
+                safe_name="${safe_name: -150}"
+            fi
+            
+            local out_path="${temp_dir}jadx_${safe_name}"
+            
+            # 如果用户没有手动指定 -d 或 --output-dir 才会到temp中
+            if [[ ! "$*" =~ "(--output-dir|-d)( |$)" ]]; then
+                extra_args=("--output-dir" "$out_path")
+                echo "Jadx output dir auto-set to: $out_path"
+            fi
+        fi
+
+        nohup "$__JADX_EXE" "$@" "${extra_args[@]}" >/dev/null 2>&1 &
     fi
 }
 _jad() {
