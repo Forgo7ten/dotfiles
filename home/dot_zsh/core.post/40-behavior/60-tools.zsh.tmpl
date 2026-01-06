@@ -15,7 +15,7 @@ function jad() {
         local temp_dir="${TMPDIR:-/tmp}"
         temp_dir="${temp_dir%/}/"
         
-        # 兼容性更好的获取最后一个参数的方法
+        # 获取最后一个参数（认为最后一个是目标文件）
         local last_arg="${@[-1]}" 
         local extra_args=()
 
