@@ -126,7 +126,7 @@ zinit ice depth=1; zinit light romkatv/powerlevel10k
 # --------------------------------------------------
 
 ## mise二进制管理
-zinit light-mode wait"0" lucid from"gh-r" \
+zinit light-mode from"gh-r" \
   mv"mise* -> mise" \
   atclone"./mise completion zsh > _mise; ./mise activate zsh | sed 's#\./mise#mise#g' > .mise-init.zsh" atpull"%atclone" \
   sbin"mise" pick".mise-init.zsh" \
@@ -178,3 +178,32 @@ zinit ice wait"1" lucid id-as"local/nvm" atload'
   [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 '
 zinit light zdharma-continuum/null
+
+
+## 生成一些工具的补全
+# use 'zi update local/completions' to update
+zinit wait"1" lucid light-mode \
+  id-as"local/completions" \
+  atclone'
+  # 定义内部辅助匿名函数
+  gen() {
+    if command -v "$1" > /dev/null 2>&1; then
+      eval "$2" > "_$1"
+      echo "Successfully generated completion for $1"
+    else
+      # echo "Skip: $1 not found"
+    fi
+  }
+  echo "Adding completions..."
+  gen "zellij"  "zellij setup --generate-completion zsh"
+  gen "uv"      "uv generate-shell-completion zsh"
+  gen "gh"      "gh completion -s zsh"
+  gen "chezmoi" "chezmoi completion zsh"
+
+  zi creinstall local/completions
+  ' \
+  atpull'%atclone' \
+  run-atpull \
+  nocompile \
+  for zdharma-continuum/null
+
