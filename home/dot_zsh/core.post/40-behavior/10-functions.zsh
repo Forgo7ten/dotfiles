@@ -22,7 +22,7 @@ alias unproxy='proxy_off'
 fregister "proxy_off/unproxy" "清除代理"
 
 ## 封装nohup
-mynohup() {
+nohu() {
     if [[ $# -eq 0 ]]; then
         echo "Usage: mynohup <command> [args...]"
         return 1
@@ -51,7 +51,7 @@ mynohup() {
         echo "Warning: Process $pid seems to have exited immediately. Check the log."
     fi
 }
-fregister "mynohup" "在后台运行命令并输出日志到临时文件"
+fregister "nohu" "在后台运行命令并输出日志到临时文件"
 
 ## git commit browser with fzf
 glf() {
