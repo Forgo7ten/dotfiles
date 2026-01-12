@@ -66,6 +66,26 @@ glf() {
 }
 fregister "glf" "git log browser with fzf"
 
+gh-token() {
+  if ! command -v gh &>/dev/null; then
+    echo "错误: 未找到 gh 命令，请先安装 GitHub CLI。"
+    return 1
+  fi
+
+  local token
+  token=$(gh auth token 2>/dev/null)
+
+  if [ -n "$token" ]; then
+    export GITHUB_TOKEN="$token"
+    export MISE_GITHUB_TOKEN="$token"
+    echo "✅ 已成功设置 GITHUB_TOKEN 和 MISE_GITHUB_TOKEN"
+  else
+    echo "❌ 错误: 无法获取 Token。请确保已运行 'gh auth login' 登录。"
+    return 1
+  fi
+}
+fregister "gh-token" "设置 GitHub Token 环境变量"
+
 # -----------------------------------------------------------------------------
 # Python Helpers
 # -----------------------------------------------------------------------------
