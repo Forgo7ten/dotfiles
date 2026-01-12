@@ -5,6 +5,7 @@
 {{-   $jadxGui := printf "%s/bin/jadx-gui" .tools.jadx_home -}}
 {{-   if stat $jadxGui }}
 # JADX Configuration
+export JADX_HOME="{{ .tools.jadx_home }}"
 alias jadx="{{ $jadxBin }}"
 __JADX_EXE="{{ $jadxGui }}"
 
@@ -52,6 +53,7 @@ _jad() {
 {{-   $jebExe := printf "%s/jeb_macos.sh" .tools.jeb_home -}}
 {{-   if stat $jebExe }}
 # JEB Configuration
+export JEB_HOME="{{ .tools.jeb_home }}"
 __JEB_EXE="{{ $jebExe }}"
 
 function jeb() {
