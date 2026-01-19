@@ -1,0 +1,15 @@
+
+{{- $itermConfigDir := joinPath .chezmoi.homeDir ".config/iterm2" }}
+
+# 开启“从自定义文件夹加载配置”
+defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
+
+# 自定义文件夹的具体路径
+defaults write com.googlecode.iterm2 PrefsCustomFolder -string "{{ $itermConfigDir }}"
+
+# 退出时自动保存更改到该文件夹，无需询问
+defaults write com.googlecode.iterm2 NoSyncNeverRemindPrefsChangesLostForFile -bool true
+defaults write com.googlecode.iterm2 NoSyncNeverRemindPrefsChangesLostForUrl -bool true
+
+# External settings: Save changes "Automatically" 
+defaults write com.googlecode.iterm2 NoSyncNeverRemindPrefsChangesLostForFile_selection -int 2
