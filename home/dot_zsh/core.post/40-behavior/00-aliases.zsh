@@ -5,7 +5,7 @@
 # General
 # -----------------------------------------------------------------------------
 
-if command -v eza > /dev/null; then
+if (( $+commands[eza] )); then
   unalias lf lg 2>/dev/null
   ## eza alias
   _EZA_BASIC='eza -lah --icons --git --group-directories-first --color-scale'
@@ -25,9 +25,6 @@ if command -v eza > /dev/null; then
     else
       eval "$eza_cmd"
     fi
-  }
-  function lf() {
-    ll -d *"$1"*(ND)
   }
   function lf() {
     local eza_cmd="$_EZA_BASIC"
@@ -52,8 +49,23 @@ else
 fi
 
 ## nvim代替vim
-alias nvi="nvim"
-alias vi="nvim"
+if (( $+commands[nvim] )); then
+  alias nvi="nvim"
+  alias vi="nvim"
+fi
 
 ## zellij创建session
-alias za="zellij a -c"
+if (( $+commands[zellij] )); then
+  alias za="zellij a -c"
+fi
+
+# ghq 快速跳转仓库
+if (( $+commands[ghq] )) && (( $+commands[fzf] )); then
+  function ghqcd() {
+    local repo=$(ghq list --full-path | fzf --query="$1")
+    if [ -n "$repo" ]; then
+      cd "$repo"
+    fi
+  }
+fi
+fregister "ghqcd" "ghq 快速跳转仓库"
