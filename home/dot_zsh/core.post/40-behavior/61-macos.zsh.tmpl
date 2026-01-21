@@ -2,7 +2,12 @@
 {{- if eq .chezmoi.os "darwin" -}}
 
 # Remove "downloaded from internet" quarantine attribute
-alias delnet="sudo xattr -r -d com.apple.quarantine ."
+delnet() {
+    # 如果第一个参数 $1 为空，则默认使用 "." (当前目录)
+    local target="${1:-.}"
+    echo "正在移除目录的隔离属性: $target"
+    sudo xattr -r -d com.apple.quarantine "$target"
+}
 
 # Tar without hidden files (like .DS_Store)
 alias tarc="tar --disable-copyfile --exclude='.DS_Store' -zcvf"
