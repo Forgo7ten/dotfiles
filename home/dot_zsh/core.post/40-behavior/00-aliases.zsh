@@ -59,13 +59,20 @@ if (( $+commands[zellij] )); then
   alias za="zellij a -c"
 fi
 
-# ghq 快速跳转仓库
+## ghq快捷函数
 if (( $+commands[ghq] )) && (( $+commands[fzf] )); then
   function ghqcd() {
-    local repo=$(ghq list --full-path | fzf --query="$1")
+    local repo=$(ghq list --full-path | fzf --query="$1" --prompt="Select Repo > ")
     if [ -n "$repo" ]; then
       cd "$repo"
     fi
   }
+  fregister "ghqcd" "ghq 快速选择 跳转仓库"
+  ghqrm () {
+    local repo=$(ghq list | fzf --query="$1" --prompt="Delete Repo > ")
+    if [ -n "$repo" ]; then
+      ghq rm "$repo"
+    fi
+  }
+  fregister "ghqrm" "ghq 快速选择 删除仓库"
 fi
-fregister "ghqcd" "ghq 快速跳转仓库"
