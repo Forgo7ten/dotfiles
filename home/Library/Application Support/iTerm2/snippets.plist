@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>snippets</key>
+	<array>
+		<dict>
+			<key>escaping</key>
+			<integer>2</integer>
+			<key>guid</key>
+			<string>D02EC278-906C-4F9D-9EE4-E3E5A2F79863</string>
+			<key>tags</key>
+			<array>
+				<string>adb</string>
+			</array>
+			<key>title</key>
+			<string>cd datalocaltmp</string>
+			<key>value</key>
+			<string>cd /data/local/tmp/</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+	</array>
+</dict>
+</plist>
