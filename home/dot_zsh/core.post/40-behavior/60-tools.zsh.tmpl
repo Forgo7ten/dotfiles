@@ -73,14 +73,18 @@ _jeb() {
 {{- /* 配置 IDA */ -}}
 {{- if and (hasKey . "tools") (hasKey .tools "ida_home") }}
 {{-   $idaExePath := "" -}}
+{{-   $idaDir := "" -}}
 {{-   if eq .chezmoi.os "darwin" -}}
 {{-     $idaExePath = printf "%s/Contents/MacOS/ida" .tools.ida_home -}}
+{{-     $idaDir = printf "%s/Contents/MacOS/" .tools.ida_home -}}
 {{-   else -}}
 {{-     $idaExePath = printf "%s/ida" .tools.ida_home -}}
+{{-     $idaDir = printf "%s/" .tools.ida_home -}}
 {{-   end }}
 {{-   if stat $idaExePath }}
 # IDA Configuration
 __IDA_EXE="{{ $idaExePath }}"
+export IDADIR="{{ $idaDir }}"
 
 function ida() {
     if [ -z "$1" ]; then

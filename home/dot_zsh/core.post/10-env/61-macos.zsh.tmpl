@@ -1,0 +1,25 @@
+
+{{- if eq .chezmoi.os "darwin" -}}
+
+# --- Homebrew OpenSSL 多版本智能检测脚本 ---
+if command -v brew >/dev/null 2>&1; then
+    for ssl_version in "openssl@3" "openssl@1.1"; do
+        TARGET_PATH=$(brew --prefix "$ssl_version" 2>/dev/null)
+
+        if [ -d "$TARGET_PATH" ]; then
+            export PATH="${TARGET_PATH}/bin:$PATH"
+            export LDFLAGS="-L${TARGET_PATH}/lib"
+            export CPPFLAGS="-I${TARGET_PATH}/include"
+            if [ -z "$PKG_CONFIG_PATH" ]; then
+                export PKG_CONFIG_PATH="${TARGET_PATH}/lib/pkgconfig"
+            else
+                export PKG_CONFIG_PATH="${TARGET_PATH}/lib/pkgconfig:$PKG_CONFIG_PATH"
+            fi
+
+            # echo "OpenSSL Config: Using $ssl_version" 
+            break
+        fi
+    done
+fi
+
+{{- end }}
