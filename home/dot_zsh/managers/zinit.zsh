@@ -128,7 +128,7 @@ zinit ice depth=1; zinit light romkatv/powerlevel10k
 ## mise二进制管理
 zinit from"gh-r" bpick"*(linux|macos)-(x64|arm64).tar.xz" \
   mv"mise/* -> ." \
-  atclone'rmdir mise; export PATH="$PWD/bin:$PATH"; mise completion zsh > _mise' atpull"%atclone" \
+  atclone'rmdir mise; ./bin/mise completion zsh > _mise' atpull"%atclone" \
   lman \
   atload'eval "$(mise activate zsh)"' \
   sbin"bin/mise" pick"/dev/null" \
