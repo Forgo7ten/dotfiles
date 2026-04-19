@@ -1,0 +1,3 @@
+{{ if eq .chezmoi.os "darwin" -}}
+{{   include "../install/macos/common/install-misc-packages.sh" }}
+{{- end }}
