@@ -23,6 +23,7 @@ readonly PACKAGES=(
 )
 
 function install_apt_packages() {
+    sudo apt-get update
     sudo apt-get install -y "${PACKAGES[@]}"
 }
 

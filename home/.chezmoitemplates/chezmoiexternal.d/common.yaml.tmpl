@@ -12,11 +12,11 @@
   url: {{ gitHubLatestReleaseAssetURL "romkatv/powerlevel10k-media" "meslo-lgs-nf.tar.gz" | quote }}
   refreshPeriod: "720h"
 
-"{{ $fontsPath }}/RobotoMono":
-  type: "archive"
-  url: {{ gitHubLatestReleaseAssetURL "ryanoasis/nerd-fonts" "RobotoMono.tar.xz" | quote }}
-  refreshPeriod: "720h"
-  include: ["RobotoMonoNerdFont{,Mono}-{Regular,Bold,Italic,BoldItalic}.ttf"]
+#"{{ $fontsPath }}/RobotoMono":
+#  type: "archive"
+#  url: {{ gitHubLatestReleaseAssetURL "ryanoasis/nerd-fonts" "RobotoMono.tar.xz" | quote }}
+#  refreshPeriod: "720h"
+#  include: ["RobotoMonoNerdFont{,Mono}-{Regular,Bold,Italic,BoldItalic}.ttf"]
 
 {{- end }}
 

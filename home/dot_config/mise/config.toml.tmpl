@@ -1,6 +1,7 @@
 # =============================================================================
 # MISE GLOBAL CONFIGURATION (~/.config/mise/config.toml)
 # =============================================================================
+{{ if ne .system "server" -}}
 
 [tools]
 # --- Core Languages & Runtimes ---
@@ -64,3 +65,20 @@ idiomatic_version_file_enable_tools = ["python"]
 #[settings.python]
 #compile = true
 
+{{- else }}
+
+#
+# Server端
+# 
+
+[tools]
+uv      = "latest"       # Python包管理
+eza     = "latest"       # ls 的现代替代品
+yazi    = "latest"       # 终端文件管理器
+usage   = "latest"       # mise 专用：生成 CLI 补全规格说明
+jq      = "latest"       # 命令行 JSON 处理器
+chezmoi = "latest"       # Dotfiles 跨设备同步工具
+bat     = "latest"       # cat替代品
+zellij  = "latest"       # Shell Session Management
+
+{{- end }}

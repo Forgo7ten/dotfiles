@@ -42,6 +42,8 @@
 {{- $jadxHome := joinPath .chezmoi.homeDir "Asoftwares/jadx" -}}
 {{- $idaHome := "" -}}
 
+{{- if ne $system "server" -}}
+
 {{- /* 设置AndroidSdk */ -}}
 {{- if and (hasKey . "tools") (hasKey .tools "andorid_sdk_ndk_version") -}}
 {{-   $ndkVersion = .tools.andorid_sdk_ndk_version -}}
@@ -77,7 +79,8 @@
 {{-   $idaHome = promptString "IDA Home Path" "/Applications/IDA Professional 9.2.app" -}}
 {{- end -}}
 
-{{- end }}
+{{- end }}  {{- /* if eq .chezmoi.os "darwin" */}}
+{{- end }} {{- /* if ne $system "server" */}}
 
 # --- 数据配置区 ---
 data:
@@ -85,16 +88,20 @@ data:
   use_secrets: {{ $useSecrets }}
   zsh_scheme: "zinit"
   git:
+{{- if $useSecrets }}
     # git commit/tag sign (gpg or ssh)
     signing_method: "gpg"
+{{- end }}
     user_name: {{ $gitName | quote }}
     user_email: {{ $gitEmail | quote }}
   tools:
+{{- if ne $system "server" }}
     jeb_home: {{ $jebHome | quote }}
     jadx_home: {{ $jadxHome | quote }}
     ida_home: {{ $idaHome | quote }}
     andorid_sdk_ndk_version: {{ $ndkVersion | quote }}
     android_sdk_buildtools_version: {{ $buildtoolsVersion | quote }}
+{{- end }} {{- /* if ne $system "server" */}}
 
 
 gitHub:
@@ -102,8 +109,8 @@ gitHub:
 
 # --- 默认umask ---
 umask: 0o022
-# --- age加密配置 ---
 {{- if $useSecrets }}
+# --- age加密配置 ---
 encryption: "age"
 age:
   identity: "~/.config/chezmoi/key.txt"

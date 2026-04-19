@@ -1,4 +1,7 @@
 
+{{- if ne .system "server" -}}
+
+
 {{- /* 配置 JADX */ -}}
 {{- if and (hasKey . "tools") (hasKey .tools "jadx_home") }}
 {{-   $jadxBin := printf "%s/bin/jadx" .tools.jadx_home -}}
@@ -129,3 +132,5 @@ fi
 {{- if and (eq .chezmoi.os "darwin") (eq $zshScheme "zinit") }}
 .zinit-tmp-subst-off
 {{- end }}
+
+{{- end }} {{- /* if ne .system "server" */}}

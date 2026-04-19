@@ -1,3 +1,5 @@
+{{- if ne .system "server" }}
+
 # 变量定义
 adb_exe="adb"
 alias open_lsposed="adb shell am start -n com.android.shell/.BugreportWarningActivity -c org.lsposed.manager.LAUNCH_MANAGER"
@@ -160,3 +162,4 @@ apinfo() {
 }
 fregister "apinfo" "打开指定包名的设置 应用详情页"
 
+{{- end }} {{- /* if ne $system "server" */}}

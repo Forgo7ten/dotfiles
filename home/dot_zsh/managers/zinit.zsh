@@ -141,9 +141,9 @@ zinit light-mode wait"1" lucid from"gh-r" \
   for ajeetdsouza/zoxide
 
 # load direnv
-zinit light-mode from"gh-r" mv"direnv* -> direnv" \
-  atclone"./direnv hook zsh > direnv-hook.zsh" atpull"%atclone" \
-  sbin"direnv" pick"direnv-hook.zsh" \
+zinit light-mode from"gh-r" as"program" mv"direnv* -> direnv" \
+  atclone"chmod +x ./direnv; ./direnv hook zsh > direnv-hook.zsh" atpull"%atclone" \
+  sbin"direnv" pick"direnv-hook.zsh" src="direnv-hook.zsh" \
   for direnv/direnv
 
 ## zsh vim模式
@@ -169,12 +169,12 @@ zinit light junegunn/fzf
 
 # thefuck 配置(不存在时忽略报错、不会自动安装)
 zinit wait'1' lucid light-mode for \
-  id-as"local/thefuck" \
+  id-as"local/thefuck" as"null" \
   atload'(( $+commands[thefuck] )) && eval $(thefuck --alias)' \
   zdharma-continuum/null
 
 # NVM 配置
-zinit ice wait"1" lucid id-as"local/nvm" atload'
+zinit ice wait"1" lucid id-as"local/nvm" as"null" atload'
   export NVM_DIR="$HOME/.nvm"
   [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
   [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
