@@ -76,3 +76,8 @@ if (( $+commands[ghq] )) && (( $+commands[fzf] )); then
   }
   fregister "ghqrm" "ghq 快速选择 删除仓库"
 fi
+
+# Get IP address (eth0)
+alias getip="ifconfig | grep -A 7 \"^eth0\""
+fregister "getip" "getip 获取eth0网卡的ip地址"
+

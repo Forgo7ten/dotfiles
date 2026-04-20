@@ -1,4 +1,4 @@
-{{- if ne .system "server" }}
+{{- if ne .system "server" -}}
 
 # 变量定义
 adb_exe="adb"
@@ -161,5 +161,4 @@ apinfo() {
     $adb_exe -s "$selected_device" shell am start -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:"$target_pkg" > /dev/null
 }
 fregister "apinfo" "打开指定包名的设置 应用详情页"
-
-{{- end }} {{- /* if ne $system "server" */}}
+{{ end }} {{- /* if ne $system "server" */}}
