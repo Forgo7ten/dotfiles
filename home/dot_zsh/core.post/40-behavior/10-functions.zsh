@@ -107,3 +107,51 @@ pyhttp(){
     python3 -m http.server "$port"
 }
 fregister "pyhttp" "快速开启python http服务"
+
+set-secret-env() {
+    # 禁用历史记录
+    local HISTFILE=
+
+    echo "请输入Secret环境变量，每行一个，按Ctrl+D或输入空行结束："
+
+    # 初始化一个空数组，用于保存用户输入的环境变量
+    local input
+    local env_vars=()
+
+    # 持续读取用户输入，直到Ctrl+D（EOF）结束，或者空行结束输入
+    while IFS= read -r input; do
+        # 如果输入为空行，则结束输入
+        if [[ -z "$input" ]]; then
+            break
+        fi
+
+        # 检查环境变量格式是否合法（如 KEY=VALUE）
+        if [[ ! "$input" =~ ^[A-Za-z_][A-Za-z0-9_]*=.*$ ]]; then
+            echo "无效的环境变量格式: $input，跳过此变量。"
+            continue
+        fi
+
+        # 添加输入的环境变量到数组
+        env_vars+=("$input")
+    done
+
+    # 如果没有输入任何有效的环境变量
+    if [ ${#env_vars[@]} -eq 0 ]; then
+        echo "没有输入有效的环境变量，退出。"
+        return 1
+    fi
+
+    # 输出确认信息
+    echo "已确认输入 ${#env_vars[@]} 个环境变量："
+
+    # 显示输入的变量，并将它们导出到环境中
+    for var in "${env_vars[@]}"; do
+        export "$var"
+        echo "$var"
+    done
+
+    # 恢复历史记录功能
+    unset HISTFILE
+}
+fregister "set-secret-env" "设置secret环境变量（隐藏命令历史）"
+
