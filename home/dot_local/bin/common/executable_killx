@@ -1,0 +1,212 @@
+#!/usr/bin/env bash
+
+# killx: preview or terminate processes by full command line pattern or TCP listen port.
+# Examples:
+#   killx -n 'xxxProcess'
+#   killx -n 'xxxProcess' -y
+#   killx -p 8080
+#   killx -p 8080 -y -9
+
+set -uo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  killx -n <pattern> [options]
+  killx -p <port> [options]
+
+Options:
+  -n, --name    Match processes by full command line pattern.
+  -p, --port    Match TCP LISTEN processes by port.
+  -y, --yes     Actually send the signal. Default is preview only.
+  -9, --force   Send SIGKILL instead of SIGTERM.
+  -h, --help    Show this help message.
+
+Notes:
+  Name mode uses pgrep -f, so it matches the full command line.
+  Port mode uses lsof and only targets TCP LISTEN processes.
+  Choose exactly one of -n/--name or -p/--port.
+
+Examples:
+  killx -n 'xxxProcess'
+  killx -n 'xxxProcess' -y
+  killx -p 8080
+  killx -p 8080 -y -9
+EOF
+}
+
+fail() {
+  printf '%s\n' "$*" >&2
+  exit 1
+}
+
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || fail "Missing required command: $1"
+}
+
+validate_port() {
+  local port="$1"
+
+  [[ "$port" =~ ^[0-9]+$ ]] || fail "Invalid port: $port"
+  [ "$port" -ge 1 ] && [ "$port" -le 65535 ] || fail "Port out of range: $port"
+}
+
+collect_name_pids() {
+  local pattern="$1"
+  local pid=""
+
+  PIDS=()
+  while IFS= read -r pid; do
+    [ -n "$pid" ] || continue
+    [ "$pid" = "$$" ] && continue
+    PIDS+=("$pid")
+  done < <(pgrep -f -- "$pattern" 2>/dev/null || true)
+}
+
+collect_port_pids() {
+  local port="$1"
+  local pid=""
+
+  PIDS=()
+  while IFS= read -r pid; do
+    [ -n "$pid" ] || continue
+    PIDS+=("$pid")
+  done < <(lsof -nP -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null | sort -u || true)
+}
+
+print_header() {
+  printf '%-8s | %-10s | %s\n' "PID" "Status" "Command"
+}
+
+print_match_rows() {
+  local pid=""
+  local cmd=""
+
+  print_header
+  for pid in "${PIDS[@]}"; do
+    cmd="$(ps -p "$pid" -o command= 2>/dev/null || true)"
+    [ -n "$cmd" ] || cmd="<exited>"
+    printf '%-8s | %-10s | %s\n' "$pid" "Match" "$cmd"
+  done
+}
+
+signal_matches() {
+  local signal_name="$1"
+  local pid=""
+  local cmd=""
+  local status=""
+
+  print_header
+  for pid in "${PIDS[@]}"; do
+    cmd="$(ps -p "$pid" -o command= 2>/dev/null || true)"
+    [ -n "$cmd" ] || cmd="<exited>"
+
+    if kill "-$signal_name" "$pid" 2>/dev/null; then
+      status="SignalSent"
+    else
+      status="Failed"
+    fi
+
+    printf '%-8s | %-10s | %s\n' "$pid" "$status" "$cmd"
+  done
+}
+
+case "${1:-}" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+esac
+
+mode=""
+target=""
+confirm="no"
+signal_name="TERM"
+
+[ $# -gt 0 ] || {
+  usage
+  exit 1
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -n|--name)
+      [ $# -ge 2 ] || fail "Missing value for $1"
+      [ -z "$mode" ] || fail "Choose only one of -n/--name or -p/--port."
+      mode="name"
+      target="$2"
+      shift 2
+      ;;
+    -p|--port)
+      [ $# -ge 2 ] || fail "Missing value for $1"
+      [ -z "$mode" ] || fail "Choose only one of -n/--name or -p/--port."
+      mode="port"
+      target="$2"
+      shift 2
+      ;;
+    -y|--yes)
+      confirm="yes"
+      shift
+      ;;
+    -9|--force)
+      signal_name="KILL"
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    -*)
+      fail "Unknown option: $1"
+      ;;
+    *)
+      fail "Unexpected argument: $1"
+      ;;
+  esac
+done
+
+[ -n "$mode" ] || fail "Missing target selector. Use -n/--name or -p/--port."
+[ -n "$target" ] || fail "Missing target value."
+
+case "$mode" in
+  name)
+    require_cmd pgrep
+    require_cmd ps
+    collect_name_pids "$target"
+    if [ "${#PIDS[@]}" -eq 0 ]; then
+      printf 'No process found matching full command line pattern: %s\n' "$target"
+      exit 0
+    fi
+
+    print_match_rows
+    if [ "$confirm" != "yes" ]; then
+      printf '\nPreview only. Re-run with -y to send SIG%s.\n' "$signal_name"
+      exit 0
+    fi
+
+    printf '\nSending SIG%s...\n' "$signal_name"
+    signal_matches "$signal_name"
+    ;;
+  port)
+    require_cmd lsof
+    require_cmd ps
+    validate_port "$target"
+    collect_port_pids "$target"
+    if [ "${#PIDS[@]}" -eq 0 ]; then
+      printf 'No process found listening on TCP port %s.\n' "$target"
+      exit 0
+    fi
+
+    print_match_rows
+    if [ "$confirm" != "yes" ]; then
+      printf '\nPreview only. Re-run with -y to send SIG%s.\n' "$signal_name"
+      exit 0
+    fi
+
+    printf '\nSending SIG%s...\n' "$signal_name"
+    signal_matches "$signal_name"
+    ;;
+  *)
+    fail "Unknown mode: $mode"
+    ;;
+esac

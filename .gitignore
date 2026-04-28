@@ -3,8 +3,8 @@
 Thumbs.db
 
 # Editor config
-.vscode/
+/.vscode/
 
-examples/
+/examples/
 
-bin/
+/bin/

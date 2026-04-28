@@ -1,0 +1,307 @@
+#!/usr/bin/env bash
+
+
+# Run a pre-uploaded JEB frontend jar on a remote host.
+# Usage:
+#   ./jeb-remote.sh <apk-file> [-o output-dir] [-j threads] [--mtimeout sec] [--ttimeout sec] [--no-resources] [-v]
+#
+# Required environment variables for real use:
+#   JEB_REMOTE_HOST              SSH target, e.g. user@server
+#   JEB_REMOTE_JEB_HOME          Remote JEB installation directory
+#   JEB_REMOTE_JEB_FRONTEND_JAR  Remote path of the already uploaded frontend jar
+#
+# Common optional variables:
+#   JEB_REMOTE_JAVA, JEB_REMOTE_WORKSPACE_ROOT
+
+set -euo pipefail
+
+resolve_script_dir() {
+  local source_path="${BASH_SOURCE[0]}"
+  local source_dir=""
+
+  while [ -L "$source_path" ]; do
+    source_dir="$(cd -P "$(dirname "$source_path")" >/dev/null 2>&1 && pwd)"
+    source_path="$(readlink "$source_path")"
+    if [[ "$source_path" != /* ]]; then
+      source_path="$source_dir/$source_path"
+    fi
+  done
+
+  cd -P "$(dirname "$source_path")" >/dev/null 2>&1 && pwd
+}
+
+SCRIPT_DIR="$(resolve_script_dir)"
+ENV_FILE="$SCRIPT_DIR/.env"
+if [ -f "$ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+  set +a
+fi
+
+REMOTE_HOST="${JEB_REMOTE_HOST:-}"
+REMOTE_JEB_HOME="${JEB_REMOTE_JEB_HOME:-}"
+REMOTE_JAVA="${JEB_REMOTE_JAVA:-java}"
+THREADS=""
+METHOD_TIMEOUT=""
+TOTAL_TIMEOUT=""
+EXPORT_RESOURCES="yes"
+VERBOSE="no"
+REMOTE_WORKSPACE_ROOT="${JEB_REMOTE_WORKSPACE_ROOT:-/tmp/jeb_remote_workspace}"
+REMOTE_JEB_FRONTEND_JAR="${JEB_REMOTE_JEB_FRONTEND_JAR:-}"
+UNSET_REMOTE_ARG="__JEB_REMOTE_UNSET__"
+
+usage() {
+  cat <<EOF
+Usage: $0 <apk-file> [-o output-dir] [-j threads] [--mtimeout sec] [--ttimeout sec] [--no-resources] [-v]
+
+Required environment variables:
+  JEB_REMOTE_HOST              SSH target, e.g. user@server
+  JEB_REMOTE_JEB_HOME          Remote JEB installation directory
+  JEB_REMOTE_JEB_FRONTEND_JAR  Remote path to the uploaded JebApkDecompiler jar
+
+Optional environment variables:
+  JEB_REMOTE_JAVA              Remote java binary (default: java)
+  JEB_REMOTE_WORKSPACE_ROOT    Remote temp workspace root (default: /tmp/jeb_remote_workspace)
+
+Optional arguments:
+  -j, --threads            Passed to JebApkDecompiler -j only when provided
+  --mtimeout               Passed to JebApkDecompiler --mtimeout only when provided
+  --ttimeout               Passed to JebApkDecompiler --ttimeout only when provided
+  --no-res, --no-resources Skip exporting decoded resources and assets
+  -v, --verbose            Passed to JebApkDecompiler -v
+EOF
+}
+
+status() {
+  printf '[%s] %s\n' "$(date '+%H:%M:%S')" "$*"
+}
+
+show_log_hint() {
+  status "可在另一个终端跟踪远端日志："
+  printf "  ssh %s 'tail -f \"%s\"'\n" "$REMOTE_HOST" "$remote_log"
+}
+
+apk_path=""
+output_dir=""
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -o|--out)
+      [ $# -ge 2 ] || { usage; exit 1; }
+      output_dir="$2"
+      shift 2
+      ;;
+    -j|--threads)
+      [ $# -ge 2 ] || { usage; exit 1; }
+      THREADS="$2"
+      shift 2
+      ;;
+    --mtimeout)
+      [ $# -ge 2 ] || { usage; exit 1; }
+      METHOD_TIMEOUT="$2"
+      shift 2
+      ;;
+    --ttimeout)
+      [ $# -ge 2 ] || { usage; exit 1; }
+      TOTAL_TIMEOUT="$2"
+      shift 2
+      ;;
+    --no-res|--no-resources)
+      EXPORT_RESOURCES="no"
+      shift
+      ;;
+    -v|--verbose)
+      VERBOSE="yes"
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      if [ -z "$apk_path" ]; then
+        apk_path="$1"
+        shift
+      else
+        usage
+      fi
+      ;;
+  esac
+done
+
+[ -n "$apk_path" ] || { usage; exit 1; }
+[ -f "$apk_path" ] || { echo "APK not found: $apk_path" >&2; exit 1; }
+[ -n "$REMOTE_HOST" ] || {
+  echo "JEB_REMOTE_HOST is not set. Configure it in $ENV_FILE." >&2
+  exit 1
+}
+[ -n "$REMOTE_JEB_HOME" ] || {
+  echo "JEB_REMOTE_JEB_HOME is not set. Configure it in $ENV_FILE." >&2
+  exit 1
+}
+[ -n "$REMOTE_JEB_FRONTEND_JAR" ] || {
+  echo "JEB_REMOTE_JEB_FRONTEND_JAR is not set. Configure it in $ENV_FILE." >&2
+  exit 1
+}
+[ -z "$THREADS" ] || [[ "$THREADS" =~ ^[0-9]+$ ]] || { echo "Invalid threads value: $THREADS" >&2; exit 1; }
+[ -z "$METHOD_TIMEOUT" ] || [[ "$METHOD_TIMEOUT" =~ ^[0-9]+$ ]] || { echo "Invalid method timeout value: $METHOD_TIMEOUT" >&2; exit 1; }
+[ -z "$TOTAL_TIMEOUT" ] || [[ "$TOTAL_TIMEOUT" =~ ^[0-9]+$ ]] || { echo "Invalid total timeout value: $TOTAL_TIMEOUT" >&2; exit 1; }
+
+apk_name="$(basename "$apk_path")"
+base_name="${apk_name%.apk}"
+if [ "$base_name" = "$apk_name" ]; then
+  base_name="${apk_name%.*}"
+fi
+[ -n "$base_name" ] || { echo "Failed to derive output directory name" >&2; exit 1; }
+
+safe_base_name="${base_name//[^A-Za-z0-9._-]/_}"
+[ -n "$safe_base_name" ] || safe_base_name="apk"
+
+if [ -n "$output_dir" ]; then
+  target_dir="$output_dir"
+else
+  target_dir="./$base_name"
+fi
+
+target_parent_dir="$(dirname "$target_dir")"
+mkdir -p "$target_parent_dir"
+[ ! -e "$target_dir" ] || { echo "Target already exists: $target_dir" >&2; exit 1; }
+
+local_archive="$(mktemp "${TMPDIR:-/tmp}/${safe_base_name}.XXXXXX.tar.gz")"
+local_extract_dir="$(mktemp -d "${TMPDIR:-/tmp}/${safe_base_name}.extract.XXXXXX")"
+remote_tmp=""
+remote_log=""
+
+cleanup() {
+  rm -f "$local_archive"
+  rm -rf "$local_extract_dir"
+  if [ -n "$remote_tmp" ]; then
+    ssh "$REMOTE_HOST" sh -s -- "$remote_tmp" >/dev/null 2>&1 <<'EOF' || true
+rm -rf -- "$1"
+EOF
+  fi
+}
+trap cleanup EXIT
+
+status "正在准备远端工作目录..."
+# Keep the heredoc command substitution unquoted so a broken EOF marker
+# does not cascade into a misleading unmatched double-quote parse error.
+remote_init=$(ssh "$REMOTE_HOST" zsh -s -- "$REMOTE_WORKSPACE_ROOT" "$safe_base_name" <<'EOF'
+[ -f ~/.zshrc ] && source ~/.zshrc >/dev/null 2>&1 || true
+set -euo pipefail
+workspace_root="$1"
+name="$2"
+
+mkdir -p "$workspace_root"
+timestamp="$(date +%Y%m%d-%H%M%S)"
+workdir="$(mktemp -d "$workspace_root/${name}.XXXXXX")"
+log_file="$workspace_root/${name}-${timestamp}.log"
+
+printf '%s\t%s\n' "$workdir" "$log_file"
+EOF
+)
+
+remote_tmp="${remote_init%%$'\t'*}"
+remote_log="${remote_init#*$'\t'}"
+
+remote_apk="$remote_tmp/input.apk"
+remote_out="$remote_tmp/$base_name"
+remote_archive="$remote_tmp/$base_name.tar.gz"
+
+status "远端工作目录已创建：$REMOTE_HOST:$remote_tmp"
+status "正在上传 APK 到远端..."
+scp "$apk_path" "$REMOTE_HOST:$remote_apk"
+status "APK 上传完成。"
+
+status "远端 JEB 任务即将开始，日志路径：$REMOTE_HOST:$remote_log"
+show_log_hint
+status "正在等待远端 JEB 反编译完成..."
+
+# ssh 执行远端命令时对空字符串参数的保留并不可靠。
+# 对未设置的可选参数传一个内部占位符，确保远端位置参数不乱序。
+remote_threads_arg="${THREADS:-$UNSET_REMOTE_ARG}"
+remote_method_timeout_arg="${METHOD_TIMEOUT:-$UNSET_REMOTE_ARG}"
+remote_total_timeout_arg="${TOTAL_TIMEOUT:-$UNSET_REMOTE_ARG}"
+
+ssh "$REMOTE_HOST" zsh -s -- \
+  "$REMOTE_JEB_HOME" "$REMOTE_JAVA" "$remote_threads_arg" "$remote_method_timeout_arg" "$remote_total_timeout_arg" \
+  "$EXPORT_RESOURCES" "$VERBOSE" \
+  "$remote_apk" "$REMOTE_JEB_FRONTEND_JAR" "$remote_out" "$remote_archive" "$remote_log" <<'EOF'
+[ -f ~/.zshrc ] && source ~/.zshrc >/dev/null 2>&1 || true
+set -euo pipefail
+
+remote_jeb_home="$1"
+remote_java="$2"
+threads="$3"
+method_timeout="$4"
+total_timeout="$5"
+export_resources="$6"
+verbose="$7"
+apk="$8"
+frontend_jar="$9"
+out="${10}"
+archive="${11}"
+log="${12}"
+
+status() {
+  local msg
+  msg="[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+  printf '%s\n' "$msg" >&2
+}
+
+[ -d "$remote_jeb_home" ] || { echo "Remote JEB_HOME not found: $remote_jeb_home" >&2; exit 1; }
+[ -f "$frontend_jar" ] || { echo "Frontend jar not found on remote: $frontend_jar" >&2; exit 1; }
+[ -f "$apk" ] || { echo "Remote APK not found: $apk" >&2; exit 1; }
+
+export JEB_HOME="$remote_jeb_home"
+
+cmd=(
+  "$remote_java"
+  -cp "$frontend_jar:$remote_jeb_home/bin/app/*"
+  JebApkDecompiler
+  "$apk"
+  -o "$out"
+)
+
+if [ "$threads" -gt 0 ] 2>/dev/null; then
+  cmd+=(-j "$threads")
+fi
+if [ "$method_timeout" -gt 0 ] 2>/dev/null; then
+  cmd+=(--mtimeout "$method_timeout")
+fi
+if [ "$total_timeout" -gt 0 ] 2>/dev/null; then
+  cmd+=(--ttimeout "$total_timeout")
+fi
+if [ "$export_resources" = "no" ]; then
+  cmd+=(--no-resources)
+fi
+if [ "$verbose" = "yes" ]; then
+  cmd+=(-v)
+fi
+
+status "正在远端执行 JEB 反编译..."
+set +e
+"${cmd[@]}" >"$log" 2>&1
+jeb_status=$?
+set -e
+
+if [ "$jeb_status" -ne 0 ]; then
+  echo "Remote JEB frontend failed. Last 50 log lines:" >&2
+  tail -n 50 "$log" >&2 || true
+  exit 1
+fi
+
+status "远端反编译完成，正在远端打包结果..."
+tar -C "$(dirname "$out")" -czf "$archive" "$(basename "$out")"
+EOF
+
+status "远端打包完成，正在下载结果包..."
+scp "$REMOTE_HOST:$remote_archive" "$local_archive"
+
+status "下载完成，正在本地解压..."
+tar -xzf "$local_archive" -C "$local_extract_dir"
+status "正在整理输出目录..."
+mv "$local_extract_dir/$base_name" "$target_dir"
+
+status "完成：$target_dir"

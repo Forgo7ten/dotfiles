@@ -1,0 +1,241 @@
+#!/usr/bin/env bash
+
+
+# Run jadx on a remote host and bring the exported project back to the local machine.
+# Usage:
+#   ./jadx-remote <apk-file> [-o output-dir]
+#
+# Required environment variable for real use:
+#   JADX_REMOTE_HOST   SSH target, e.g. user@server
+#
+# Common optional variables:
+#   JADX_REMOTE_JADX, JADX_REMOTE_WORKSPACE_ROOT
+
+set -euo pipefail
+
+resolve_script_dir() {
+  local source_path="${BASH_SOURCE[0]}"
+  local source_dir=""
+
+  while [ -L "$source_path" ]; do
+    source_dir="$(cd -P "$(dirname "$source_path")" >/dev/null 2>&1 && pwd)"
+    source_path="$(readlink "$source_path")"
+    if [[ "$source_path" != /* ]]; then
+      source_path="$source_dir/$source_path"
+    fi
+  done
+
+  cd -P "$(dirname "$source_path")" >/dev/null 2>&1 && pwd
+}
+
+SCRIPT_DIR="$(resolve_script_dir)"
+ENV_FILE="$SCRIPT_DIR/.env"
+if [ -f "$ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+  set +a
+fi
+
+REMOTE_HOST="${JADX_REMOTE_HOST:-}"
+REMOTE_JADX="${JADX_REMOTE_JADX:-jadx}"
+THREADS="32"
+REMOTE_WORKSPACE_ROOT="${JADX_REMOTE_WORKSPACE_ROOT:-/tmp/jadx_remote_workspace}"
+
+usage() {
+  cat <<EOF
+Usage: $0 <apk-file> [-o output-dir] [-j threads]
+
+Required environment variables:
+  JADX_REMOTE_HOST            SSH target, e.g. user@server
+
+Optional environment variables:
+  JADX_REMOTE_JADX            Remote jadx binary (default: jadx)
+  JADX_REMOTE_WORKSPACE_ROOT  Remote temp workspace root (default: /tmp/jadx_remote_workspace)
+
+Optional arguments:
+  -j, --threads          jadx threads (default: 32)
+EOF
+}
+
+status() {
+  printf '[%s] %s\n' "$(date '+%H:%M:%S')" "$*"
+}
+
+show_log_hint() {
+  status "可在另一个终端跟踪远端日志："
+  printf "  ssh %s 'tail -f \"%s\"'\n" "$REMOTE_HOST" "$remote_log"
+}
+
+apk_path=""
+output_dir=""
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -o|--out)
+      [ $# -ge 2 ] || usage
+      output_dir="$2"
+      shift 2
+      ;;
+    -j|--threads)
+      [ $# -ge 2 ] || usage
+      THREADS="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      if [ -z "$apk_path" ]; then
+        apk_path="$1"
+        shift
+      else
+        usage
+      fi
+      ;;
+  esac
+done
+
+[ -n "$apk_path" ] || { usage; exit 1; }
+[ -f "$apk_path" ] || { echo "APK not found: $apk_path" >&2; exit 1; }
+[ -n "$REMOTE_HOST" ] || {
+  echo "JADX_REMOTE_HOST is not set. Configure it in $ENV_FILE." >&2
+  exit 1
+}
+[ -n "$REMOTE_JADX" ] || { echo "JADX_REMOTE_JADX is empty. Configure it in $ENV_FILE." >&2; exit 1; }
+[[ "$THREADS" =~ ^[1-9][0-9]*$ ]] || { echo "Invalid threads value: $THREADS" >&2; exit 1; }
+
+apk_name="$(basename "$apk_path")"
+base_name="${apk_name%.apk}"
+if [ "$base_name" = "$apk_name" ]; then
+  base_name="${apk_name%.*}"
+fi
+[ -n "$base_name" ] || { echo "Failed to derive output directory name" >&2; exit 1; }
+
+# Keep remote temp names readable while avoiding unsafe path chars.
+safe_base_name="${base_name//[^A-Za-z0-9._-]/_}"
+[ -n "$safe_base_name" ] || safe_base_name="apk"
+
+if [ -n "$output_dir" ]; then
+  target_dir="$output_dir"
+else
+  target_dir="./$base_name"
+fi
+
+target_parent_dir="$(dirname "$target_dir")"
+mkdir -p "$target_parent_dir"
+[ ! -e "$target_dir" ] || { echo "Target already exists: $target_dir" >&2; exit 1; }
+
+# 本地临时压缩包路径，用于接收远端打包结果。
+local_archive="$(mktemp "${TMPDIR:-/tmp}/${safe_base_name}.XXXXXX.tar.gz")"
+local_extract_dir="$(mktemp -d "${TMPDIR:-/tmp}/${safe_base_name}.extract.XXXXXX")"
+remote_tmp=""
+remote_log=""
+
+cleanup() {
+  rm -f "$local_archive"
+  rm -rf "$local_extract_dir"
+  if [ -n "$remote_tmp" ]; then
+    ssh "$REMOTE_HOST" sh -s -- "$remote_tmp" >/dev/null 2>&1 <<'EOF' || true
+rm -rf -- "$1"
+EOF
+  fi
+}
+trap cleanup EXIT
+
+# 第一步：在远端的统一工作区下创建本次任务目录。
+# 所有任务都放在 /tmp 下的一个固定 jadx 工作区中，避免 /tmp 目录过于散乱。
+# 每个 APK 在工作区下生成独立子目录，并单独生成一个保留的日志文件。
+status "正在准备远端工作目录..."
+remote_init=$(ssh "$REMOTE_HOST" zsh -s -- "$REMOTE_WORKSPACE_ROOT" "$safe_base_name" <<'EOF'
+[ -f ~/.zshrc ] && source ~/.zshrc >/dev/null 2>&1 || true
+set -euo pipefail
+workspace_root="$1"
+name="$2"
+
+mkdir -p "$workspace_root"
+timestamp="$(date +%Y%m%d-%H%M%S)"
+workdir="$(mktemp -d "$workspace_root/${name}.XXXXXX")"
+log_file="$workspace_root/${name}-${timestamp}.log"
+
+printf '%s\t%s\n' "$workdir" "$log_file"
+EOF
+)
+
+remote_tmp="${remote_init%%$'\t'*}"
+remote_log="${remote_init#*$'\t'}"
+
+remote_apk="$remote_tmp/input.apk"
+remote_out="$remote_tmp/$base_name"
+remote_archive="$remote_tmp/$base_name.tar.gz"
+
+# 第二步：把 APK 上传到远端临时目录。
+status "远端工作目录已创建：$REMOTE_HOST:$remote_tmp"
+status "正在上传 APK 到远端..."
+scp "$apk_path" "$REMOTE_HOST:$remote_apk"
+status "APK 上传完成。"
+
+# 在真正发起远端反编译前先告诉用户日志位置，便于手动 tail 观察进度。
+status "远端 JADX 任务即将开始，日志路径：$REMOTE_HOST:$remote_log"
+show_log_hint
+status "正在等待远端 JADX 反编译完成..."
+
+# 第三步：在远端工作目录中运行 jadx 反编译，并把结果打成压缩包。
+# 日志写入统一工作区，任务结束后只保留该日志文件。
+ssh "$REMOTE_HOST" zsh -s -- \
+  "$REMOTE_JADX" "$THREADS" "$remote_apk" "$remote_out" "$remote_archive" "$remote_log" <<'EOF'
+[ -f ~/.zshrc ] && source ~/.zshrc >/dev/null 2>&1 || true
+set -euo pipefail
+
+jadx_bin="$1"
+threads="$2"
+apk="$3"
+out="$4"
+archive="$5"
+log="$6"
+
+status() {
+  local msg
+  msg="[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+  printf '%s\n' "$msg" >&2
+}
+
+jadx_status=0
+status "正在远端执行 JADX 反编译..."
+nohup "$jadx_bin" -j "$threads" -d "$out" -e --export-gradle-type android-app "$apk" >"$log" 2>&1 || jadx_status=$?
+
+finished_with_errors="no"
+if grep -q 'finished with errors' "$log" 2>/dev/null; then
+  finished_with_errors="yes"
+fi
+
+if [ "$jadx_status" -ne 0 ]; then
+  if [ "$finished_with_errors" = "yes" ]; then
+    echo "Remote jadx finished with decompilation errors. Continuing with generated files." >&2
+    echo "Remote log: $log" >&2
+  else
+    echo "Remote jadx failed. Last 50 log lines:" >&2
+    tail -n 50 "$log" >&2 || true
+    exit 1
+  fi
+fi
+
+status "远端反编译阶段结束，正在远端打包结果..."
+tar -C "$(dirname "$out")" -czf "$archive" "$(basename "$out")"
+EOF
+
+# 第四步：把远端压缩包下载回本地。
+status "远端打包完成，正在下载结果包..."
+scp "$REMOTE_HOST:$remote_archive" "$local_archive"
+
+# 第五步：先在本地临时目录解压，再移动到最终输出目录。
+status "下载完成，正在本地解压..."
+tar -xzf "$local_archive" -C "$local_extract_dir"
+status "正在整理输出目录..."
+mv "$local_extract_dir/$base_name" "$target_dir"
+
+# 第六步：输出结果路径。
+# 远端工作目录、本地临时压缩包和本地临时解压目录由 trap 在脚本退出时自动清理。
+# 远端统一工作区中只保留本次任务的日志文件，格式为 apk文件名-时间.log。
+status "完成：$target_dir"
