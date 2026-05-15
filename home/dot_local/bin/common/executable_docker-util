@@ -1,0 +1,1092 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+PROGRAM_NAME="$(basename "$0")"
+
+LIST_ITEMS=()
+COMPOSE_DIRS=()
+COMPOSE_FILES=()
+
+usage() {
+  cat <<EOF
+用法:
+  $PROGRAM_NAME <命令> [选项]
+
+命令:
+  clean-image <镜像名或镜像ID> [--all] [--delete]
+      打印由该镜像创建的所有容器。
+      默认以 dry-run 模式运行，不会删除任何内容。
+      增加 --delete 后，会删除匹配的容器，然后删除镜像。
+      增加 --all 后，会按容器创建时记录的镜像名查找历史容器，
+      并同步处理仍引用这些历史镜像 ID 的其他容器。
+
+  clean-stopped-containers [--delete]
+      打印所有已停止的容器。
+      增加 --delete 后，会删除这些容器。
+
+  clean-dangling-images [--delete]
+      打印所有悬空镜像，也就是 REPOSITORY 和 TAG 均为 <none> 的镜像。
+      增加 --delete 后，会删除这些镜像。
+
+  shell <容器名或容器ID>
+      进入容器 shell。会优先使用 bash，不存在时改用 sh。
+
+  clean-containers-by-name <名称关键字> [--delete]
+      按容器名关键字打印匹配的容器。
+      增加 --delete 后，会删除这些容器，包括正在运行的容器。
+
+  inspect-summary <容器名或容器ID>
+      查看容器的关键信息摘要。
+
+  compose-update
+      扫描当前目录下一层子目录中的 Compose 配置文件。
+      逐个询问是否更新，记录选择后再统一执行 pull 和 up -d。
+
+选项:
+  -h, --help
+      显示帮助信息。
+
+示例:
+  $PROGRAM_NAME clean-image nginx:latest
+  $PROGRAM_NAME clean-image nginx:latest --delete
+  $PROGRAM_NAME clean-image nginx:latest --all --delete
+  $PROGRAM_NAME clean-stopped-containers
+  $PROGRAM_NAME clean-dangling-images --delete
+  $PROGRAM_NAME shell my-container
+  $PROGRAM_NAME clean-containers-by-name redis --delete
+  $PROGRAM_NAME inspect-summary my-container
+  $PROGRAM_NAME compose-update
+EOF
+}
+
+clean_image_usage() {
+  cat <<EOF
+用法:
+  $PROGRAM_NAME clean-image <镜像名或镜像ID> [--all] [--delete]
+
+参数:
+  镜像名或镜像ID
+      Docker 镜像名、标签，或镜像 ID。
+
+选项:
+  --delete
+      删除所有匹配的容器，包括正在运行的容器，然后删除镜像。
+
+  --all
+      按容器创建时记录的镜像名匹配历史容器，myapp 与 myapp:latest 视为同一个镜像名。
+      例如容器创建时使用的是 myapp 或 myapp:latest，即使 myapp:latest 后来重新构建或重新拉取，
+      也会匹配这些旧容器，并同步删除仍引用这些历史镜像 ID 的其他容器和镜像。
+
+默认行为:
+  不加 --all 时，按当前镜像引用匹配容器，也就是 Docker 的 ancestor 过滤逻辑。
+  以 dry-run 模式运行，只打印匹配的容器，不删除任何内容。
+EOF
+}
+
+clean_stopped_containers_usage() {
+  cat <<EOF
+用法:
+  $PROGRAM_NAME clean-stopped-containers [--delete]
+
+选项:
+  --delete
+      删除所有已停止的容器。
+
+默认行为:
+  以 dry-run 模式运行，只打印已停止的容器，不删除任何内容。
+EOF
+}
+
+clean_dangling_images_usage() {
+  cat <<EOF
+用法:
+  $PROGRAM_NAME clean-dangling-images [--delete]
+
+选项:
+  --delete
+      删除引用悬空镜像的容器，然后删除这些悬空镜像。
+
+默认行为:
+  以 dry-run 模式运行，只打印会删除的悬空镜像和相关容器，不删除任何内容。
+EOF
+}
+
+shell_usage() {
+  cat <<EOF
+用法:
+  $PROGRAM_NAME shell <容器名或容器ID>
+
+参数:
+  容器名或容器ID
+      要进入的容器。
+
+行为:
+  优先进入 bash；如果容器内没有 bash，则进入 sh。
+EOF
+}
+
+clean_containers_by_name_usage() {
+  cat <<EOF
+用法:
+  $PROGRAM_NAME clean-containers-by-name <名称关键字> [--delete]
+
+参数:
+  名称关键字
+      用于匹配容器名的关键字。
+
+选项:
+  --delete
+      删除所有匹配的容器，包括正在运行的容器。
+
+默认行为:
+  以 dry-run 模式运行，只打印匹配的容器，不删除任何内容。
+EOF
+}
+
+inspect_summary_usage() {
+  cat <<EOF
+用法:
+  $PROGRAM_NAME inspect-summary <容器名或容器ID>
+
+参数:
+  容器名或容器ID
+      要查看摘要信息的容器。
+EOF
+}
+
+compose_update_usage() {
+  cat <<EOF
+用法:
+  $PROGRAM_NAME compose-update
+
+行为:
+  扫描当前目录下一层子目录。
+  如果子目录中存在以下任一 Compose 配置文件，则加入候选列表:
+    docker-compose.yaml
+    docker-compose.yml
+    compose.yaml
+    compose.yml
+
+  脚本会先逐个询问是否更新，记录完所有选择后，再对同意更新的目录依次执行:
+    docker compose -f <配置文件> pull
+    docker compose -f <配置文件> up -d
+EOF
+}
+
+require_docker() {
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "错误: 未找到 docker 命令。" >&2
+    exit 127
+  fi
+
+  if ! docker info >/dev/null 2>&1; then
+    echo "错误: Docker daemon 不可用。" >&2
+    echo "请确认 Docker 已启动，并且当前用户有权限访问 Docker。" >&2
+    exit 1
+  fi
+}
+
+require_docker_compose() {
+  if ! docker compose version >/dev/null 2>&1; then
+    echo "错误: docker compose 命令不可用。" >&2
+    echo "请安装 Docker Compose v2，或检查当前 Docker 配置。" >&2
+    exit 127
+  fi
+}
+
+require_interactive_terminal() {
+  local message="$1"
+
+  if [ ! -t 0 ] || [ ! -t 1 ]; then
+    echo "错误: $message" >&2
+    return 1
+  fi
+}
+
+list_to_array() {
+  local lines="$1"
+  local item
+
+  LIST_ITEMS=()
+  while IFS= read -r item; do
+    [ -n "$item" ] && LIST_ITEMS+=("$item")
+  done <<< "$lines"
+}
+
+print_delete_hint() {
+  local command_line="$1"
+
+  echo
+  echo "[dry-run] 未删除任何内容。"
+  echo "如需执行删除，请执行:"
+  echo "  $PROGRAM_NAME $command_line"
+}
+
+container_exists() {
+  docker container inspect "$1" >/dev/null 2>&1
+}
+
+container_status() {
+  docker inspect -f '{{.State.Status}}' "$1" 2>/dev/null || true
+}
+
+container_running() {
+  [ "$(docker inspect -f '{{.State.Running}}' "$1" 2>/dev/null || true)" = "true" ]
+}
+
+image_exists() {
+  docker image inspect "$1" >/dev/null 2>&1
+}
+
+image_full_id() {
+  docker image inspect -f '{{.Id}}' "$1" 2>/dev/null || true
+}
+
+require_container_exists() {
+  local container="$1"
+
+  if ! container_exists "$container"; then
+    echo "错误: 容器不存在: $container" >&2
+    return 1
+  fi
+}
+
+require_container_running() {
+  local container="$1"
+  local status
+
+  if container_running "$container"; then
+    return 0
+  fi
+
+  status="$(container_status "$container")"
+  echo "错误: 容器未运行，当前状态: ${status:-未知}。" >&2
+  echo "请先启动容器:" >&2
+  echo "  docker start \"$container\"" >&2
+  return 1
+}
+
+print_container_table() {
+  local title="$1"
+  local ids="$2"
+  local container_id
+
+  echo "$title"
+
+  if [ -z "$ids" ]; then
+    echo "  未找到匹配的容器。"
+    return 0
+  fi
+
+  printf "%-14s %-30s %-28s %s\n" "容器ID" "镜像" "状态" "名称"
+  while IFS= read -r container_id; do
+    [ -z "$container_id" ] && continue
+    docker ps -a \
+      --filter "id=$container_id" \
+      --format "{{.ID}}\t{{.Image}}\t{{.Status}}\t{{.Names}}"
+  done <<< "$ids" |
+    while IFS="$(printf '\t')" read -r id image status names; do
+      printf "%-14s %-30s %-28s %s\n" "$id" "$image" "$status" "$names"
+    done
+}
+
+image_id_matches() {
+  local listed_id="${1#sha256:}"
+  local expected_id="${2#sha256:}"
+
+  [ "$listed_id" = "$expected_id" ] ||
+    [[ "$listed_id" == "$expected_id"* ]] ||
+    [[ "$expected_id" == "$listed_id"* ]]
+}
+
+print_image_table() {
+  local title="$1"
+  local ids="$2"
+  local image_id
+
+  echo "$title"
+
+  if [ -z "$ids" ]; then
+    echo "  未找到匹配的镜像。"
+    return 0
+  fi
+
+  printf "%-14s %-28s %-18s %-14s %s\n" "镜像ID" "仓库" "标签" "大小" "创建时间"
+  docker images \
+    --filter "dangling=true" \
+    --format "{{.ID}}\t{{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedSince}}" |
+    while IFS="$(printf '\t')" read -r id repository tag size created; do
+      while IFS= read -r image_id; do
+        [ -z "$image_id" ] && continue
+        if image_id_matches "$id" "$image_id"; then
+          printf "%-14s %-28s %-18s %-14s %s\n" "$id" "$repository" "$tag" "$size" "$created"
+          break
+        fi
+      done <<< "$ids"
+    done
+}
+
+delete_containers() {
+  local ids="$1"
+
+  if [ -z "$ids" ]; then
+    echo "没有需要删除的匹配容器。"
+    return 0
+  fi
+
+  list_to_array "$ids"
+  docker rm -f "${LIST_ITEMS[@]}"
+}
+
+delete_images() {
+  local ids="$1"
+
+  if [ -z "$ids" ]; then
+    echo "没有需要删除的匹配镜像。"
+    return 0
+  fi
+
+  list_to_array "$ids"
+  docker rmi "${LIST_ITEMS[@]}"
+}
+
+containers_using_image() {
+  local image_id="$1"
+
+  docker ps -aq --filter "ancestor=$image_id"
+}
+
+normalize_image_name() {
+  local image="$1"
+  local last_component
+
+  if [[ "$image" == *@* ]]; then
+    echo "$image"
+    return 0
+  fi
+
+  last_component="${image##*/}"
+  if [[ "$last_component" == *:* ]]; then
+    echo "$image"
+  else
+    echo "$image:latest"
+  fi
+}
+
+container_image_name_matches() {
+  local container_image="$1"
+  local expected_image="$2"
+
+  [ "$(normalize_image_name "$container_image")" = "$(normalize_image_name "$expected_image")" ]
+}
+
+containers_created_from_image_name() {
+  local image="$1"
+  local container_id
+  local container_image
+
+  while IFS= read -r container_id; do
+    [ -z "$container_id" ] && continue
+    container_image="$(docker inspect -f '{{.Config.Image}}' "$container_id" 2>/dev/null || true)"
+    if container_image_name_matches "$container_image" "$image"; then
+      echo "$container_id"
+    fi
+  done <<< "$(docker ps -aq)"
+}
+
+images_used_by_containers() {
+  local container_ids="$1"
+  local container_id
+  local image_id
+  local image_ids=()
+
+  while IFS= read -r container_id; do
+    [ -z "$container_id" ] && continue
+    image_id="$(docker inspect -f '{{.Image}}' "$container_id" 2>/dev/null || true)"
+    [ -z "$image_id" ] && continue
+    image_ids+=("$image_id")
+  done <<< "$container_ids"
+
+  if [ "${#image_ids[@]}" -eq 0 ]; then
+    return 0
+  fi
+
+  printf "%s\n" "${image_ids[@]}" | sort -u
+}
+
+append_containers_using_images() {
+  local container_ids="$1"
+  local used_image_ids="$2"
+  local image_id
+  local using_containers
+
+  {
+    [ -n "$container_ids" ] && printf "%s\n" "$container_ids"
+    while IFS= read -r image_id; do
+      [ -z "$image_id" ] && continue
+      using_containers="$(containers_using_image "$image_id")"
+      [ -n "$using_containers" ] && printf "%s\n" "$using_containers"
+    done <<< "$used_image_ids"
+    true
+  } | sort -u
+}
+
+filter_out_image_id() {
+  local ids="$1"
+  local ignored_id="$2"
+  local image_id
+
+  while IFS= read -r image_id; do
+    [ -z "$image_id" ] && continue
+    if [ -n "$ignored_id" ] && image_id_matches "$image_id" "$ignored_id"; then
+      continue
+    fi
+    echo "$image_id"
+  done <<< "$ids"
+}
+
+containers_using_images() {
+  local ids="$1"
+  local image_id
+  local containers
+
+  {
+    while IFS= read -r image_id; do
+      [ -z "$image_id" ] && continue
+      containers="$(containers_using_image "$image_id")"
+      [ -n "$containers" ] && printf "%s\n" "$containers"
+    done <<< "$ids"
+    true
+  } | sort -u
+}
+
+find_container_shell() {
+  local container="$1"
+  local probe_shell
+  local shell_path
+
+  for probe_shell in /bin/sh /usr/bin/sh /bin/bash /usr/bin/bash; do
+    shell_path="$(docker exec "$container" "$probe_shell" -c 'command -v bash 2>/dev/null || command -v sh 2>/dev/null' 2>/dev/null || true)"
+    if [ -n "$shell_path" ]; then
+      echo "$shell_path"
+      return 0
+    fi
+  done
+
+  for shell_path in /bin/bash /usr/bin/bash /bin/sh /usr/bin/sh; do
+    if docker exec "$container" "$shell_path" -c 'exit 0' >/dev/null 2>&1; then
+      echo "$shell_path"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+clean_image() {
+  local image=""
+  local containers
+  local delete=false
+  local images
+  local all=false
+  local current_image_id
+  local historical_images
+  local matched_containers
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --delete)
+        delete=true
+        shift
+        ;;
+      --all)
+        all=true
+        shift
+        ;;
+      -h|--help)
+        clean_image_usage
+        return 0
+        ;;
+      -*)
+        echo "错误: 未知的 clean-image 选项: $1" >&2
+        echo >&2
+        clean_image_usage >&2
+        return 2
+        ;;
+      *)
+        if [ -n "$image" ]; then
+          echo "错误: clean-image 只允许传入一个参数。" >&2
+          echo >&2
+          clean_image_usage >&2
+          return 2
+        fi
+
+        image="$1"
+        shift
+        ;;
+    esac
+  done
+
+  if [ -z "$image" ]; then
+    echo "错误: 必须传入镜像名或镜像 ID。" >&2
+    echo >&2
+    clean_image_usage >&2
+    return 2
+  fi
+
+  require_docker
+
+  if [ "$all" = "true" ]; then
+    matched_containers="$(containers_created_from_image_name "$image")"
+    images="$(images_used_by_containers "$matched_containers")"
+    containers="$(append_containers_using_images "$matched_containers" "$images")"
+    current_image_id="$(image_full_id "$image")"
+  else
+    containers="$(docker ps -aq --filter "ancestor=$image")"
+    images="$image"
+    current_image_id=""
+  fi
+
+  echo "镜像: $image"
+  if [ "$all" = "true" ]; then
+    echo "匹配模式: --all，按容器创建时记录的镜像名匹配历史容器，并包含仍引用历史镜像 ID 的其他容器。"
+  else
+    echo "匹配模式: 默认，按当前镜像引用匹配容器。"
+  fi
+  echo
+  print_container_table "由该镜像创建的容器:" "$containers"
+
+  if [ "$delete" = "false" ]; then
+    if [ "$all" = "true" ]; then
+      print_delete_hint "clean-image \"$image\" --all --delete"
+    else
+      print_delete_hint "clean-image \"$image\" --delete"
+    fi
+    return 0
+  fi
+
+  if [ "$all" = "false" ] && ! image_exists "$image"; then
+    echo
+    echo "未找到镜像: $image"
+    echo "无匹配的容器，未执行删除。"
+    return 0
+  fi
+
+  if [ "$all" = "true" ] && [ -z "$containers" ] && ! image_exists "$image"; then
+    echo
+    echo "未找到镜像或由该镜像名创建的历史容器: $image"
+    echo "无匹配的容器，未执行删除。"
+    return 0
+  fi
+
+  echo
+  echo "开始删除匹配的容器和镜像..."
+  delete_containers "$containers"
+  if [ "$all" = "true" ]; then
+    historical_images="$(filter_out_image_id "$images" "$current_image_id")"
+    delete_images "$historical_images"
+    if image_exists "$image"; then
+      docker rmi "$image"
+    fi
+  else
+    docker rmi "$image"
+  fi
+}
+
+clean_stopped_containers() {
+  local containers
+  local delete=false
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --delete)
+        delete=true
+        shift
+        ;;
+      -h|--help)
+        clean_stopped_containers_usage
+        return 0
+        ;;
+      -*)
+        echo "错误: 未知的 clean-stopped-containers 选项: $1" >&2
+        echo >&2
+        clean_stopped_containers_usage >&2
+        return 2
+        ;;
+      *)
+        echo "错误: 未知的 clean-stopped-containers 参数: $1" >&2
+        echo >&2
+        clean_stopped_containers_usage >&2
+        return 2
+        ;;
+    esac
+  done
+
+  require_docker
+
+  containers="$(
+    {
+      docker ps -aq --filter "status=exited"
+      docker ps -aq --filter "status=created"
+      docker ps -aq --filter "status=dead"
+    } | sort -u
+  )"
+
+  print_container_table "已停止的容器:" "$containers"
+
+  if [ "$delete" = "false" ]; then
+    print_delete_hint "clean-stopped-containers --delete"
+    return 0
+  fi
+
+  echo
+  echo "开始删除已停止的容器..."
+  delete_containers "$containers"
+}
+
+clean_dangling_images() {
+  local images
+  local containers
+  local delete=false
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --delete)
+        delete=true
+        shift
+        ;;
+      -h|--help)
+        clean_dangling_images_usage
+        return 0
+        ;;
+      -*)
+        echo "错误: 未知的 clean-dangling-images 选项: $1" >&2
+        echo >&2
+        clean_dangling_images_usage >&2
+        return 2
+        ;;
+      *)
+        echo "错误: 未知的 clean-dangling-images 参数: $1" >&2
+        echo >&2
+        clean_dangling_images_usage >&2
+        return 2
+        ;;
+    esac
+  done
+
+  require_docker
+
+  images="$(docker images -q --filter "dangling=true" | sort -u)"
+  containers="$(containers_using_images "$images")"
+
+  print_image_table "悬空镜像:" "$images"
+  echo
+  print_container_table "会删除的相关容器:" "$containers"
+
+  if [ "$delete" = "false" ]; then
+    print_delete_hint "clean-dangling-images --delete"
+    return 0
+  fi
+
+  echo
+  echo "开始删除相关容器和悬空镜像..."
+  delete_containers "$containers"
+  delete_images "$images"
+}
+
+open_shell() {
+  local container=""
+  local shell_path
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      -h|--help)
+        shell_usage
+        return 0
+        ;;
+      -*)
+        echo "错误: 未知的 shell 选项: $1" >&2
+        echo >&2
+        shell_usage >&2
+        return 2
+        ;;
+      *)
+        if [ -n "$container" ]; then
+          echo "错误: shell 命令只允许传入一个参数。" >&2
+          echo >&2
+          shell_usage >&2
+          return 2
+        fi
+
+        container="$1"
+        shift
+        ;;
+    esac
+  done
+
+  if [ -z "$container" ]; then
+    echo "错误: 必须传入容器名或容器 ID。" >&2
+    echo >&2
+    shell_usage >&2
+    return 2
+  fi
+
+  require_docker
+
+  require_container_exists "$container" || return $?
+  require_container_running "$container" || return $?
+  require_interactive_terminal "shell 命令需要交互式终端，当前环境不是 TTY，未执行 docker exec -it。" || return $?
+
+  if ! shell_path="$(find_container_shell "$container")"; then
+    echo "错误: 容器内未找到可用的 bash 或 sh。" >&2
+    return 1
+  fi
+
+  echo "进入容器 $container，使用 $shell_path。"
+  docker exec -it "$container" "$shell_path"
+}
+
+clean_containers_by_name() {
+  local keyword=""
+  local containers
+  local delete=false
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --delete)
+        delete=true
+        shift
+        ;;
+      -h|--help)
+        clean_containers_by_name_usage
+        return 0
+        ;;
+      -*)
+        echo "错误: 未知的 clean-containers-by-name 选项: $1" >&2
+        echo >&2
+        clean_containers_by_name_usage >&2
+        return 2
+        ;;
+      *)
+        if [ -n "$keyword" ]; then
+          echo "错误: clean-containers-by-name 只允许传入一个参数。" >&2
+          echo >&2
+          clean_containers_by_name_usage >&2
+          return 2
+        fi
+
+        keyword="$1"
+        shift
+        ;;
+    esac
+  done
+
+  if [ -z "$keyword" ]; then
+    echo "错误: 必须传入容器名称关键字。" >&2
+    echo >&2
+    clean_containers_by_name_usage >&2
+    return 2
+  fi
+
+  require_docker
+
+  containers="$(docker ps -aq --filter "name=$keyword")"
+
+  echo "名称关键字: $keyword"
+  echo
+  print_container_table "匹配的容器:" "$containers"
+
+  if [ "$delete" = "false" ]; then
+    print_delete_hint "clean-containers-by-name \"$keyword\" --delete"
+    return 0
+  fi
+
+  echo
+  echo "开始删除匹配的容器..."
+  delete_containers "$containers"
+}
+
+inspect_summary() {
+  local container=""
+  local ports
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      -h|--help)
+        inspect_summary_usage
+        return 0
+        ;;
+      -*)
+        echo "错误: 未知的 inspect-summary 选项: $1" >&2
+        echo >&2
+        inspect_summary_usage >&2
+        return 2
+        ;;
+      *)
+        if [ -n "$container" ]; then
+          echo "错误: inspect-summary 命令只允许传入一个参数。" >&2
+          echo >&2
+          inspect_summary_usage >&2
+          return 2
+        fi
+
+        container="$1"
+        shift
+        ;;
+    esac
+  done
+
+  if [ -z "$container" ]; then
+    echo "错误: 必须传入容器名或容器 ID。" >&2
+    echo >&2
+    inspect_summary_usage >&2
+    return 2
+  fi
+
+  require_docker
+
+  require_container_exists "$container" || return $?
+
+  echo "容器摘要: $container"
+  echo
+  docker inspect -f '名称: {{.Name}}' "$container"
+  docker inspect -f '容器ID: {{.Id}}' "$container"
+  docker inspect -f '镜像: {{.Config.Image}}' "$container"
+  docker inspect -f '状态: {{.State.Status}}' "$container"
+  docker inspect -f '启动时间: {{.State.StartedAt}}' "$container"
+  docker inspect -f '重启次数: {{.RestartCount}}' "$container"
+  docker inspect -f '命令: {{json .Config.Cmd}}' "$container"
+  echo
+  echo "端口映射:"
+  ports="$(docker port "$container" || true)"
+  if [ -n "$ports" ]; then
+    echo "$ports"
+  else
+    echo "  未发现端口映射。"
+  fi
+  echo
+  echo "网络:"
+  docker inspect -f "{{range \$name, \$network := .NetworkSettings.Networks}}  {{\$name}}: {{\$network.IPAddress}}{{println}}{{end}}" "$container"
+  echo "挂载:"
+  docker inspect -f '{{range .Mounts}}  {{.Type}}: {{.Source}} -> {{.Destination}} {{println}}{{end}}' "$container"
+  echo "环境变量:"
+  docker inspect -f '{{range .Config.Env}}  {{println .}}{{end}}' "$container"
+}
+
+find_compose_file() {
+  local dir="$1"
+  local file
+  local found_files=()
+
+  for file in docker-compose.yaml docker-compose.yml compose.yaml compose.yml; do
+    if [ -f "$dir/$file" ]; then
+      found_files+=("$file")
+    fi
+  done
+
+  if [ "${#found_files[@]}" -eq 0 ]; then
+    return 1
+  fi
+
+  if [ "${#found_files[@]}" -gt 1 ]; then
+    echo "提示: $dir 存在多个 Compose 配置文件，将使用 ${found_files[0]}。" >&2
+  fi
+
+  echo "${found_files[0]}"
+}
+
+collect_compose_dirs() {
+  local dir
+  local compose_file
+
+  COMPOSE_DIRS=()
+  COMPOSE_FILES=()
+
+  for dir in ./*/; do
+    [ -d "$dir" ] || continue
+
+    if compose_file="$(find_compose_file "$dir")"; then
+      COMPOSE_DIRS+=("${dir%/}")
+      COMPOSE_FILES+=("$compose_file")
+    fi
+  done
+}
+
+ask_yes_no() {
+  local prompt="$1"
+  local answer
+
+  while true; do
+    if ! read -r -p "$prompt [y/n]: " answer; then
+      echo "输入已结束，未继续执行。" >&2
+      return 2
+    fi
+
+    case "$answer" in
+      y|Y|yes|YES)
+        return 0
+        ;;
+      n|N|no|NO|"")
+        return 1
+        ;;
+      *)
+        echo "请输入 y 或 n。"
+        ;;
+    esac
+  done
+}
+
+compose_update() {
+  local dir
+  local compose_file
+  local index
+  local selected_indexes=()
+  local failed_updates=()
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      -h|--help)
+        compose_update_usage
+        return 0
+        ;;
+      -*)
+        echo "错误: 未知的 compose-update 选项: $1" >&2
+        echo >&2
+        compose_update_usage >&2
+        return 2
+        ;;
+      *)
+        echo "错误: compose-update 命令不接受参数: $1" >&2
+        echo >&2
+        compose_update_usage >&2
+        return 2
+        ;;
+    esac
+  done
+
+  # compose-update 暂时只允许交互式执行；当前实现同时要求 stdin 和 stdout 是 TTY。
+  require_interactive_terminal "compose-update 当前只支持交互式终端执行，未执行更新。" || return $?
+  require_docker
+  require_docker_compose
+  collect_compose_dirs
+
+  if [ "${#COMPOSE_DIRS[@]}" -eq 0 ]; then
+    echo "当前目录下一层子目录中未找到 Compose 配置文件。"
+    return 0
+  fi
+
+  echo "发现以下 Compose 目录:"
+  for index in "${!COMPOSE_DIRS[@]}"; do
+    dir="${COMPOSE_DIRS[$index]}"
+    compose_file="${COMPOSE_FILES[$index]}"
+    echo "  $dir ($compose_file)"
+  done
+
+  echo
+  echo "请逐个选择是否更新。"
+
+  for index in "${!COMPOSE_DIRS[@]}"; do
+    dir="${COMPOSE_DIRS[$index]}"
+    compose_file="${COMPOSE_FILES[$index]}"
+
+    if ask_yes_no "是否更新 $dir ($compose_file)?"; then
+      selected_indexes+=("$index")
+    else
+      case "$?" in
+        1)
+          ;;
+        *)
+          return 1
+          ;;
+      esac
+    fi
+  done
+
+  if [ "${#selected_indexes[@]}" -eq 0 ]; then
+    echo
+    echo "未选择任何 Compose 目录，未执行更新。"
+    return 0
+  fi
+
+  echo
+  echo "将更新以下 Compose 目录:"
+  for index in "${selected_indexes[@]}"; do
+    dir="${COMPOSE_DIRS[$index]}"
+    compose_file="${COMPOSE_FILES[$index]}"
+    echo "  $dir ($compose_file)"
+  done
+
+  for index in "${selected_indexes[@]}"; do
+    dir="${COMPOSE_DIRS[$index]}"
+    compose_file="${COMPOSE_FILES[$index]}"
+
+    echo
+    echo "开始更新 $dir ($compose_file)..."
+    if (
+      cd "$dir" &&
+        docker compose -f "$compose_file" pull &&
+        docker compose -f "$compose_file" up -d
+    ); then
+      echo "更新完成: $dir ($compose_file)"
+    else
+      echo "错误: 更新失败: $dir ($compose_file)" >&2
+      failed_updates+=("$dir ($compose_file)")
+    fi
+  done
+
+  if [ "${#failed_updates[@]}" -gt 0 ]; then
+    echo >&2
+    echo "以下 Compose 目录更新失败:" >&2
+    for dir in "${failed_updates[@]}"; do
+      echo "  $dir" >&2
+    done
+    return 1
+  fi
+}
+
+main() {
+  local command="${1:-}"
+
+  case "$command" in
+    clean-image)
+      shift
+      clean_image "$@"
+      ;;
+    clean-stopped-containers)
+      shift
+      clean_stopped_containers "$@"
+      ;;
+    clean-dangling-images)
+      shift
+      clean_dangling_images "$@"
+      ;;
+    shell)
+      shift
+      open_shell "$@"
+      ;;
+    clean-containers-by-name)
+      shift
+      clean_containers_by_name "$@"
+      ;;
+    inspect-summary)
+      shift
+      inspect_summary "$@"
+      ;;
+    compose-update)
+      shift
+      compose_update "$@"
+      ;;
+    -h|--help|"")
+      usage
+      ;;
+    *)
+      echo "错误: 未知命令: $command" >&2
+      echo >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+}
+
+main "$@"

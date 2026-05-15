@@ -4,7 +4,7 @@ fregister "dl-jeb" "下载jeb"
 fregister "jadx-remote" "远程调用jadx反编译"
 fregister "jeb-remote" "远程调用jeb反编译"
 fregister "killx" "快速杀死指定进程"
-
+fregister "docker-util" "docker快捷操作脚本"
 
 ## 设置代理
 proxy_on() {
