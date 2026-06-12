@@ -6,6 +6,31 @@ fregister "jeb-remote" "远程调用jeb反编译"
 fregister "killx" "快速杀死指定进程"
 fregister "docker-util" "docker快捷操作脚本"
 
+getip() {
+    # 打印表格头部
+    echo "+-----------------+-------------------------------+"
+    echo "| Interface (网卡)| IP Address (IP 地址)          |"
+    echo "+-----------------+-------------------------------+"
+
+    if [ "$(uname)" = "Darwin" ]; then
+        # macOS 逻辑：匹配网卡名，并将其与下一行的 inet IP 关联，过滤掉 127.0.0.1
+        ifconfig | awk '
+            /^[a-z0-9]+:/ { iface=$1; sub(":$", "", iface) }
+            /inet / { if ($2 != "127.0.0.1") printf "| %-15s | %-29s |\n", iface, $2 }
+        '
+    else
+        # Linux 逻辑：使用 ip -o 单行输出模式，提取网卡名和 IP，过滤掉 lo (127.0.0.1)
+        ip -o -4 addr show | awk '
+            $2 != "lo" { split($4, a, "/"); printf "| %-15s | %-29s |\n", $2, a[1] }
+        '
+    fi
+    
+    # 打印表格尾部
+    echo "+-----------------+-------------------------------+"
+}
+fregister "getip" "获取网卡与ip地址"
+
+
 ## 设置代理
 proxy_on() {
     local addr=${1:-"127.0.0.1:7897"}

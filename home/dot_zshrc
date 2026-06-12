@@ -13,7 +13,7 @@ path=(
 )
 fpath=(
     $fpath
-    ${HOME}/.local/bin/common(N-/)
+    ${HOME}/.local/share/zsh/completions(N-/)
 )
 
 # --------------------------------------------------
