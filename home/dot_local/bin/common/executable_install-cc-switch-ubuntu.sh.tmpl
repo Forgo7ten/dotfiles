@@ -1,0 +1,118 @@
+{{ if and (eq .chezmoi.os "linux") (hasKey .chezmoi "osRelease") (eq .chezmoi.osRelease.id "ubuntu") (eq .system "client") -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO="farion1231/cc-switch"
+API_URL="https://api.github.com/repos/${REPO}/releases/latest"
+
+log() {
+  printf '[cc-switch] %s\n' "$*"
+}
+
+fail() {
+  printf '[cc-switch] ERROR: %s\n' "$*" >&2
+  exit 1
+}
+
+need_cmd() {
+  command -v "$1" >/dev/null 2>&1 || fail "缺少命令: $1"
+}
+
+if [[ "$(uname -s)" != "Linux" ]]; then
+  fail "当前脚本只支持 Linux"
+fi
+
+if [[ ! -r /etc/os-release ]]; then
+  fail "无法读取 /etc/os-release，不能确认发行版"
+fi
+
+# shellcheck disable=SC1091
+. /etc/os-release
+if [[ "${ID:-}" != "ubuntu" ]]; then
+  fail "当前第一版脚本只适配 Ubuntu，检测到: ${PRETTY_NAME:-unknown}"
+fi
+
+case "$(uname -m)" in
+  x86_64 | amd64)
+    asset_arch="x86_64"
+    ;;
+  aarch64 | arm64)
+    asset_arch="arm64"
+    ;;
+  *)
+    fail "不支持的 CPU 架构: $(uname -m)，当前仅支持 x86_64 和 arm64"
+    ;;
+esac
+
+need_cmd curl
+need_cmd python3
+
+if [[ "${EUID}" -eq 0 ]]; then
+  APT=(apt)
+else
+  need_cmd sudo
+  APT=(sudo apt)
+fi
+
+tmpdir="$(mktemp -d)"
+cleanup() {
+  rm -rf "$tmpdir"
+}
+trap cleanup EXIT
+
+release_json="${tmpdir}/latest-release.json"
+asset_info="${tmpdir}/asset-info.txt"
+
+log "获取 GitHub 最新发布版本..."
+curl -fsSL \
+  -H "Accept: application/vnd.github+json" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  "$API_URL" \
+  -o "$release_json"
+
+python3 - "$release_json" "$asset_arch" >"$asset_info" <<'PY'
+import json
+import sys
+
+release_path, asset_arch = sys.argv[1], sys.argv[2]
+with open(release_path, "r", encoding="utf-8") as f:
+    release = json.load(f)
+
+tag = release.get("tag_name") or ""
+assets = release.get("assets") or []
+
+matches = [
+    asset
+    for asset in assets
+    if asset.get("name", "").endswith(f"Linux-{asset_arch}.deb")
+]
+
+if not matches:
+    names = "\n".join(asset.get("name", "") for asset in assets)
+    raise SystemExit(
+        f"没有找到 Linux-{asset_arch}.deb 资产。当前发布版本: {tag}\n可用资产:\n{names}"
+    )
+
+asset = matches[0]
+print(tag)
+print(asset["name"])
+print(asset["browser_download_url"])
+PY
+
+mapfile -t info <"$asset_info"
+version="${info[0]}"
+asset_name="${info[1]}"
+download_url="${info[2]}"
+deb_path="${tmpdir}/${asset_name}"
+
+log "最新版本: ${version}"
+log "匹配资产: ${asset_name}"
+log "下载到临时目录..."
+curl -fL --retry 3 --retry-delay 2 "$download_url" -o "$deb_path"
+
+log "通过 apt 安装..."
+"${APT[@]}" install -y "$deb_path"
+
+log "安装完成"
+
+{{-   end }}
