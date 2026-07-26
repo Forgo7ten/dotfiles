@@ -58,3 +58,51 @@ killx -p <port> [options]
 ```bash
 ./killx -p 8080
 ```
+
+## sync-managed-section
+
+通用：把「内容源」合并进目标文件的标记托管段。
+
+只改写 `<!-- <MARKER>:START -->` … `<!-- <MARKER>:END -->` 之间的内容，
+其余（如 OMC/OMX 段、本机备注）一律保留。托管段**始终位于文件末尾**。
+
+```bash
+sync-managed-section \
+  --content ~/.claude/CLAUDE.user.md \
+  --target  ~/.claude/CLAUDE.md \
+  --marker  CHEZMOI-USER
+
+sync-managed-section --content ... --target ... --marker CHEZMOI-USER --status
+sync-managed-section --content ... --target ... --marker CHEZMOI-USER --remove
+```
+
+- 标记按**整行精确匹配**解析：顺序错误、嵌套、未闭合、多段或含 CR/CRLF 会拒绝写入
+- 内容源整行不得出现起止标记
+- `--status`：已同步 exit 0，否则 1
+- 实现：Python 3（stdlib only）
+
+## sync-claude-prefs
+
+`sync-managed-section` 的 Claude 薄封装：
+
+| 项 | 默认 |
+|----|------|
+| 内容源 | `~/.claude/CLAUDE.user.md`（仓库：`home/dot_claude/CLAUDE.user.md`） |
+| 目标 | `~/.claude/CLAUDE.md` |
+| 标记 | `CHEZMOI-USER` |
+
+```bash
+sync-claude-prefs            # 合并
+sync-claude-prefs --status   # 仅检查（已同步 exit 0，否则 1）
+sync-claude-prefs --remove   # 移除托管段
+```
+
+环境变量：`CLAUDE_USER_CONTENT` / `CLAUDE_USER_TARGET`  
+可选：`SYNC_MANAGED_SECTION` 指向 core 可执行文件。
+
+## chezmoi 自动同步
+
+`home/.chezmoiscripts/common/run_onchange_after_50-sync-claude-prefs.sh.tmpl`
+
+- `CLAUDE.user.md` 变更时触发，调用 `sync-claude-prefs`
+- 合并逻辑不在钩子里，由封装 / `sync-managed-section` 负责

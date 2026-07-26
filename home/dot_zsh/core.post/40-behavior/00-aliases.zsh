@@ -10,7 +10,7 @@ if (( $+commands[eza] )); then
   ## eza alias
   _EZA_BASIC='eza -lah --icons --git --group-directories-first --color-scale'
 
-  alias ls='eza -a --icons --group-directories-first --hyperlink'
+  alias ls='eza -a --icons --group-directories-first'
   alias l="$_EZA_BASIC"
   alias ll="l --hyperlink"
   function lg() {
