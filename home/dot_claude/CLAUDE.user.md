@@ -3,7 +3,6 @@
 ## 输出与沟通
 
 - 模型输出使用中文
-- 写表述时（代码注释、帮助文案、命名、文档、提交说明等）：直接写当前正确表述即可；不要用「不限 X」「不再是 Y」去强调已删除的旧限制
 
 ## 工具使用
 
@@ -12,7 +11,12 @@
 
 ## 代码分析
 
-- 如果要分析代码项目（理解架构、查找函数/类、追踪调用链、影响分析、死代码检测等），优先使用 codebase-memory-mcp（先确保项目已索引，用 search_graph / trace_path / get_architecture / detect_changes / query_graph 等结构化查询，而非逐文件 grep+read）
+- 如果要分析代码项目（理解架构、查找函数/类、追踪调用链、影响分析、死代码检测等），**优先使用 codebase-memory-mcp**，用 search_graph / trace_path / get_code_snippet / get_architecture / detect_changes / query_graph 等结构化查询，而非逐文件 grep+read。
+- **先确保项目已索引**：用 `list_projects` / `index_status` 确认；**未索引则先执行 `index_repository` 完成索引再查询**（索引是异步的，索引进度用 `index_status` 轮询）。
+
+## 编码约定
+
+- 注释：描述代码当前做什么，不要描述它替代了什么；注释中不要引用旧实现
 
 ## 子代理使用协议
 

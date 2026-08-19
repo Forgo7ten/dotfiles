@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# 当托管的 Claude 或 Codex 用户内容变化时，分别合并进对应的全局约束文件
+# 只改写 <!-- CHEZMOI-USER:START/END --> 段，保留 OMC、OMX 与本机其它内容
+#
+# 变化指纹（任一内容变更都会触发本脚本重新执行）:
+# Claude: {{ include "dot_claude/CLAUDE.user.md" | sha256sum }}
+# Codex:  {{ include "dot_codex/AGENTS.user.md" | sha256sum }}
+
+set -euo pipefail
+
+TAG="[sync-agent-prefs]"
+STATUS=0
+
+sync_prefs() {
+  local product="$1"
+  local script="$2"
+
+  if [ ! -x "$script" ]; then
+    # apply 顺序下脚本文件应已就位；若尚未部署则只跳过当前产品，避免阻塞其它同步
+    echo "$TAG 未找到 $product 同步程序: $script，跳过"
+    return 0
+  fi
+
+  echo "$TAG 开始同步 $product 用户约束..."
+  if ! "$script"; then
+    echo "$TAG $product 用户约束同步失败" >&2
+    STATUS=1
+  fi
+}
+
+sync_prefs "Claude" "{{ joinPath .chezmoi.homeDir ".local/bin/common/sync-claude-prefs" }}"
+sync_prefs "Codex" "{{ joinPath .chezmoi.homeDir ".local/bin/common/sync-codex-prefs" }}"
+
+exit "$STATUS"

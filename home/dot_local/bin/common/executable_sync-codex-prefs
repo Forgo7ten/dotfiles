@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+# sync-codex-prefs: 将 chezmoi 托管的用户内容合并进 ~/.codex/AGENTS.md
+#
+# 薄封装：固定 Codex 默认路径与标记，实际逻辑见 sync-managed-section。
+#
+# 用法:
+#   sync-codex-prefs              # 合并（默认）
+#   sync-codex-prefs --status     # 仅检查状态，不写入
+#   sync-codex-prefs --remove     # 移除托管段，保留其余内容
+#   sync-codex-prefs --help
+#
+# --status 退出码:
+#   0  已同步
+#   1  需要更新 / 内容源缺失 / 标记异常
+
+set -euo pipefail
+
+MARKER_ID='CHEZMOI-USER'
+DEFAULT_CONTENT="${HOME}/.codex/AGENTS.user.md"
+DEFAULT_TARGET="${HOME}/.codex/AGENTS.md"
+
+CONTENT_PATH="${CODEX_USER_CONTENT:-$DEFAULT_CONTENT}"
+TARGET_PATH="${CODEX_USER_TARGET:-$DEFAULT_TARGET}"
+
+ACTION="merge"
+
+usage() {
+  cat <<'EOF'
+用法:
+  sync-codex-prefs              将托管用户内容合并进 ~/.codex/AGENTS.md
+  sync-codex-prefs --status     仅检查状态，不写入（已同步则退出码 0）
+  sync-codex-prefs --remove     移除托管段，保留其余内容
+  sync-codex-prefs --help
+
+环境变量覆盖:
+  CODEX_USER_CONTENT        托管内容源（默认: ~/.codex/AGENTS.user.md）
+  CODEX_USER_TARGET         目标 AGENTS.md（默认: ~/.codex/AGENTS.md）
+  SYNC_MANAGED_SECTION      可选，指定 sync-managed-section 可执行文件路径
+
+标记:
+  <!-- CHEZMOI-USER:START -->
+  ... 托管内容 ...
+  <!-- CHEZMOI-USER:END -->
+
+说明:
+  本命令是 sync-managed-section 的 Codex 薄封装；托管段始终位于文件末尾。
+  标记行仅支持 LF 换行（含 CR/CRLF 会拒绝）。
+EOF
+}
+
+fail() {
+  printf '[sync-codex-prefs] ERROR: %s\n' "$*" >&2
+  exit 1
+}
+
+resolve_core() {
+  local here candidate
+  here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+  if [ -n "${SYNC_MANAGED_SECTION:-}" ]; then
+    if [ -f "$SYNC_MANAGED_SECTION" ] || [ -x "$SYNC_MANAGED_SECTION" ]; then
+      printf '%s\n' "$SYNC_MANAGED_SECTION"
+      return 0
+    fi
+    fail "SYNC_MANAGED_SECTION 无效: $SYNC_MANAGED_SECTION"
+  fi
+
+  for candidate in \
+    "$here/sync-managed-section" \
+    "$here/sync-managed-section.py" \
+    "$here/executable_sync-managed-section.py"; do
+    if [ -f "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  if command -v sync-managed-section >/dev/null 2>&1; then
+    command -v sync-managed-section
+    return 0
+  fi
+  if command -v sync-managed-section.py >/dev/null 2>&1; then
+    command -v sync-managed-section.py
+    return 0
+  fi
+
+  fail "未找到 sync-managed-section（设置 SYNC_MANAGED_SECTION 或安装到同目录）"
+}
+
+parse_args() {
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --status | status) ACTION="status" ;;
+      --remove | remove) ACTION="remove" ;;
+      --merge | merge) ACTION="merge" ;;
+      -h | --help | help)
+        usage
+        exit 0
+        ;;
+      *)
+        fail "未知参数: $1（使用 --help 查看用法）"
+        ;;
+    esac
+    shift
+  done
+}
+
+main() {
+  parse_args "$@"
+  local core
+  core="$(resolve_core)"
+
+  local -a cmd
+  if [[ "$core" == *.py ]]; then
+    cmd=(python3 "$core")
+  else
+    cmd=("$core")
+  fi
+
+  cmd+=(--content "$CONTENT_PATH" --target "$TARGET_PATH" --marker "$MARKER_ID")
+  case "$ACTION" in
+    status) cmd+=(--status) ;;
+    remove) cmd+=(--remove) ;;
+    merge) cmd+=(--merge) ;;
+    *) fail "未知动作: $ACTION" ;;
+  esac
+
+  exec "${cmd[@]}"
+}
+
+main "$@"
