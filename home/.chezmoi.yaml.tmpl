@@ -1,12 +1,16 @@
 {{- /* 设置机器类型 */ -}}
 {{- $system := "" -}}
+{{- $systemChoices := list "client" "server" -}}
 {{- if hasKey . "system" -}}
 {{-   $system = .system -}}
 {{- /* Set client to the MacOS default system */ -}}
 {{- else if eq .chezmoi.os "darwin" -}}
 {{    $system = "client" -}}
 {{- else -}}
-{{-   $system = promptString "System (client or server)" "client" -}}
+{{-   $system = promptChoice "System" $systemChoices "client" -}}
+{{- end -}}
+{{- if not (or (eq $system "client") (eq $system "server")) -}}
+{{-   warnf (printf "invalid system role %q: must be client or server" $system) -}}{{- exit 1 -}}
 {{- end -}}
 
 {{- /* 处理 Git 用户名逻辑 */ -}}

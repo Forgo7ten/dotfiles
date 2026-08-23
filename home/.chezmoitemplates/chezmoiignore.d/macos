@@ -1,7 +1,7 @@
 .profile
 .bashrc
 
-.zsh/core/40-behavior/linux.zsh
+.zsh/features/40-behavior/61-linux.zsh
 .zsh/local/os/linux.zsh
 
 .config/ghostty/linux.config

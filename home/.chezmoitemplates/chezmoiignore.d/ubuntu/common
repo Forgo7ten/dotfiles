@@ -1,7 +1,7 @@
 .config/iterm2
 Library
 
-.zsh/core/40-behavior/macos.zsh
+.zsh/features/40-behavior/61-macos.zsh
 .zsh/local/os/macos.zsh
 
 .config/ghostty/macos.config
