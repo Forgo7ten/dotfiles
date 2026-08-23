@@ -4,6 +4,12 @@
 
 - 模型输出使用中文
 
+# Avoid instruction-to-output leakage
+
+Distinguish instructions from deliverable content. Embody the requirements; never restate them unless explicitly requested.
+
+Describe the intended end state, not the history of how it got there. Do not reference previous implementations, rejected approaches, corrections, or conversation history unless genuinely necessary.
+
 ## 工具使用
 
 - 如果需要使用网页搜索，调用exa MCP，而不是search工具
@@ -13,10 +19,6 @@
 
 - 如果要分析代码项目（理解架构、查找函数/类、追踪调用链、影响分析、死代码检测等），**优先使用 codebase-memory-mcp**，用 search_graph / trace_path / get_code_snippet / get_architecture / detect_changes / query_graph 等结构化查询，而非逐文件 grep+read。
 - **先确保项目已索引**：用 `list_projects` / `index_status` 确认；**未索引则先执行 `index_repository` 完成索引再查询**（索引是异步的，索引进度用 `index_status` 轮询）。
-
-## 编码约定
-
-- 注释：描述代码当前做什么，不要描述它替代了什么；注释中不要引用旧实现
 
 ## 子代理使用协议
 

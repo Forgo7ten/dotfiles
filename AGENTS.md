@@ -39,6 +39,7 @@
 - `setup.sh` 必须保持为 Bash 远程入口，不得依赖仓库已克隆或当前工作目录。
 - `install/` 是平台安装实现；修改其 include 路径、入口或顺序时，同时检查对应的 `home/.chezmoiscripts/` 包装模板，不复制另一套安装逻辑。
 - Zsh 加载顺序为 `.pre_profile → core → manager → core.post → local → .post_profile → zshrc.post`；保持 `core` 的阶段依赖与无插件边界。
+- 修改通用 CLI agent 约束时，同步更新 `home/dot_claude/CLAUDE.user.md` 与 `home/dot_codex/AGENTS.user.md`；仅当用户明确限定特定 CLI 或明确无需同步时例外。
 - `.pre_profile` 与 `.post_profile` 属于机器本地用户配置，不得加入仓库或由 agent 修改。
 
 ## 敏感信息
