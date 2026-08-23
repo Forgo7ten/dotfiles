@@ -24,11 +24,11 @@
 完整的主配置加载流程为：
 
 ```text
-core → managers → core.post → local
+core → managers → features → local
 ```
 
 - `../managers/` 初始化 zinit 或 zimfw 等插件管理器。
-- `../core.post/` 放置依赖插件或外部工具的环境、别名和函数。
+- `../features/` 放置依赖插件或外部工具的环境、别名和函数。
 - `../local/` 加载通用、操作系统及主机级差异配置。
 - `../zshrc.post.zsh.tmpl` 在主配置和用户本地 profile 之后完成最终插件配置。
 

@@ -17,7 +17,7 @@
 | `20-options/` | `setopt`、`unsetopt`、`zstyle` 等 Zsh 行为选项 |
 | `30-keymap/` | 不依赖插件的 `bindkey` 与 ZLE 键位配置 |
 
-- 插件初始化放到 `../managers/`；依赖插件或外部工具的环境、别名、函数放到 `../core.post/`；机器差异覆盖放到 `../local/`。
+- 插件初始化放到 `../managers/`；依赖插件或外部工具的环境、别名、函数放到 `../features/`；机器差异覆盖放到 `../local/`。
 - 新阶段目录沿用两位数字前缀；源文件使用 `.zsh`，需要 chezmoi 条件时使用 `.zsh.tmpl`。
 
 ## 强制约束

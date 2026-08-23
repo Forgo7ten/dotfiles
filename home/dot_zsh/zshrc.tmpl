@@ -40,10 +40,10 @@ done
 {{- end }}
 
 # --------------------------------------------------
-# 3. Load core configuration (plugin-dependent)
+# 3. Load shell features (after plugin manager)
 # --------------------------------------------------
 
-for stage in $ZDOTDIR/core.post/[0-9][0-9]-*/**/*.zsh(Nn-.); do
+for stage in $ZDOTDIR/features/[0-9][0-9]-*/**/*.zsh(Nn-.); do
   source "$stage"
 done
 
