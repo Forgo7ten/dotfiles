@@ -1,0 +1,2 @@
+# Server 不部署 GUI 终端配置
+.config/ghostty

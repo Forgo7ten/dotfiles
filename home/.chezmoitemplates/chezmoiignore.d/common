@@ -5,7 +5,5 @@
 **/*.age
 {{- end }}
 
-com.googlecode.iterm2.plist
-plugin.jupyterlab-settings
-
+# Sheldon 本地插件源目录不由 chezmoi 管理
 .config/sheldon/plugin_sources

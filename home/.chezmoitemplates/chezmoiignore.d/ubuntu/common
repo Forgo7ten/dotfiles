@@ -5,3 +5,7 @@ Library
 .zsh/local/os/macos.zsh
 
 .config/ghostty/macos.config
+
+# IDA-NO-MCP skill 当前仅支持 macOS
+.agents/skills/decompile-by-idanomcp
+.claude/skills/decompile-by-idanomcp

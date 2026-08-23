@@ -5,7 +5,7 @@
 {{-   $fontsPath = ".local/share/fonts" -}}
 {{- end -}}
 
-{{- if $fontsPath }}
+{{- if and $fontsPath (ne .system "server") }}
 
 "{{ $fontsPath }}/MesloLGS":
   type: "archive"

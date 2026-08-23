@@ -1,4 +1,4 @@
-{{ if eq .chezmoi.os "linux" -}}
+{{ if and (eq .chezmoi.os "linux") (ne .system "server") -}}
 #!/bin/bash
 
 # 作用：当字体文件变动时自动刷新 Linux 字体缓存
