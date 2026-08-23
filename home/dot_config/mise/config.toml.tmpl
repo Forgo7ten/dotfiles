@@ -4,6 +4,12 @@
 {{ if ne .system "server" -}}
 
 [tools]
+# --- Node包管理 ---
+# node包在node Path之前
+"npm:bash-language-server" = "latest" # Bash LSP (LazyVim 补全必备)
+"npm:@anthropic-ai/claude-code" = "latest"  # Claude
+"npm:@openai/codex" = "latest"              # codex
+
 # --- Core Languages & Runtimes ---
 go     = "latest"
 node   = "lts"
@@ -40,11 +46,6 @@ tree-sitter = "latest"
 shellcheck = "latest"    # Shell 脚本静态检查
 shfmt      = "latest"    # Shell 脚本代码格式化
 bats       = "latest"    # Bash 自动化测试系统
-
-# --- Node包管理 ---
-"npm:bash-language-server" = "latest" # Bash LSP (LazyVim 补全必备)
-"npm:@anthropic-ai/claude-code" = "latest"  # Claude
-"npm:@openai/codex" = "latest"              # codex
 
 # --- Git 仓库 ---
 "github:cli/cli"       = "latest" # GitHub 官方命令行工具 (gh)
