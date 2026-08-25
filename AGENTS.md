@@ -42,6 +42,13 @@
 - 修改通用 CLI agent 约束时，同步更新 `home/dot_claude/CLAUDE.user.md` 与 `home/dot_codex/AGENTS.user.md`；仅当用户明确限定特定 CLI 或明确无需同步时例外。
 - `.pre_profile` 与 `.post_profile` 属于机器本地用户配置，不得加入仓库或由 agent 修改。
 
+## 工具管理边界
+
+- 新增或迁移 CLI 工具到 mise、Zinit 前，先检查 `install/`、mise 平台片段及 Zinit 配置，确认该工具是否已由其他机制安装。
+- 同一平台与系统角色下，一个工具原则上只保留一个主要安装来源；确需重复时，必须注明用途与优先级。
+- macOS 重点检查 Homebrew 安装列表；Linux 分别检查 apt 安装脚本以及 `client` / `server` 的 mise 配置。
+- 从某个安装来源删除工具前，确认所有目标平台仍有可用的安装来源，避免迁移后缺失。
+
 ## 敏感信息
 
 - 不解密、输出或复制现有密钥与凭据；未经明确要求，不修改 `.key.txt.age`、`private_*` 或 `encrypted_*`。
