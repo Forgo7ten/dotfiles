@@ -141,7 +141,7 @@ pyhttp(){
 }
 fregister "pyhttp" "快速开启python http服务"
 
-set-secret-env() {
+export-secret-env() {
     # 禁用历史记录
     local HISTFILE=
 
@@ -186,5 +186,5 @@ set-secret-env() {
     # 恢复历史记录功能
     unset HISTFILE
 }
-fregister "set-secret-env" "设置secret环境变量（隐藏命令历史）"
+fregister "export-secret-env" "导出 Secret 环境变量（隐藏命令历史）"
 
