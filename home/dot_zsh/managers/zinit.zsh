@@ -125,14 +125,12 @@ zinit ice depth=1; zinit light romkatv/powerlevel10k
 # 4. 其他工具
 # --------------------------------------------------
 
-## mise二进制管理
-zinit from"gh-r" bpick"*(linux|macos)-(x64|arm64).tar.xz" \
-  mv"mise/* -> ." \
-  atclone'rmdir mise; ./bin/mise completion zsh > _mise' atpull"%atclone" \
-  lman \
-  atload'eval "$(mise activate zsh)"' \
-  sbin"bin/mise" pick"/dev/null" \
-  for jdx/mise
+# load direnv
+zinit light-mode from"gh-r" as"program" mv"direnv* -> direnv" \
+  atclone"chmod +x ./direnv; ./direnv hook zsh > direnv-hook.zsh" atpull"%atclone" \
+  sbin"direnv" pick"direnv-hook.zsh" src="direnv-hook.zsh" \
+  for direnv/direnv
+
 
 ## load zoxide: 'z' 目录快速跳转
 zinit light-mode wait"1" lucid from"gh-r" \
@@ -140,32 +138,18 @@ zinit light-mode wait"1" lucid from"gh-r" \
   sbin"zoxide" pick"/dev/null" src"zoxide-init.zsh" \
   for ajeetdsouza/zoxide
 
-# load direnv
-zinit light-mode from"gh-r" as"program" mv"direnv* -> direnv" \
-  atclone"chmod +x ./direnv; ./direnv hook zsh > direnv-hook.zsh" atpull"%atclone" \
-  sbin"direnv" pick"direnv-hook.zsh" src="direnv-hook.zsh" \
-  for direnv/direnv
-
 ## zsh vim模式
 #zinit ice depth=1
 #zinit light jeffreytse/zsh-vi-mode
 
-## fzf
-# Ctrl+R 快速寻找hisotry
-# Ctrl+R 快速寻找当前目录下文件
-# Alt+C  快速寻找当前目录下的目录
-zinit ice wait"1" lucid from"gh-r" \
-  atclone"./fzf --zsh > fzf-init.zsh" atpull"%atclone" \
-  sbin"fzf" pick"fzf-init.zsh"
-zinit light junegunn/fzf
-
-
-## SDKMAN 配置
-# zinit ice wait"1" lucid id-as"local/sdkman" atload'
-#   export SDKMAN_DIR="$HOME/.sdkman"
-#   [[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
-# '
-# zinit light zdharma-continuum/null
+## fzf shell 集成（二进制由 macOS Homebrew 或 Linux mise 管理）
+# Ctrl+R 搜索命令历史
+# Ctrl+T 搜索当前目录下的文件
+# Alt+C  搜索当前目录下的目录
+zinit wait'1' lucid light-mode for \
+  id-as"local/fzf" as"null" \
+  atload'(( $+commands[fzf] )) && source <(fzf --zsh)' \
+  zdharma-continuum/null
 
 # thefuck 配置(不存在时忽略报错、不会自动安装)
 zinit wait'1' lucid light-mode for \
@@ -183,7 +167,8 @@ zinit light zdharma-continuum/null
 
 
 ## 生成一些工具的补全
-# use 'zi update local/completions' to update
+# use `zi update local/completions` to update
+# 部分工具由 mise 管理；执行 mise install 后需手动 update
 zinit wait"1" lucid light-mode \
   id-as"local/completions" \
   atclone'
@@ -201,6 +186,7 @@ zinit wait"1" lucid light-mode \
   gen "uv"      "uv generate-shell-completion zsh"
   gen "gh"      "gh completion -s zsh"
   gen "chezmoi" "chezmoi completion zsh"
+  gen "mise"    "mise completion zsh"
 
   zi creinstall local/completions
   ' \
@@ -208,4 +194,3 @@ zinit wait"1" lucid light-mode \
   run-atpull \
   nocompile \
   for zdharma-continuum/null
-

@@ -1,0 +1,14 @@
+#
+# Server端
+#
+
+[tools]
+uv      = "latest"       # Python包管理
+eza     = "latest"       # ls 的现代替代品
+fzf     = "latest"       # 命令行模糊搜索工具
+yazi    = "latest"       # 终端文件管理器
+usage   = "latest"       # mise 专用：生成 CLI 补全规格说明
+jq      = "latest"       # 命令行 JSON 处理器
+chezmoi = "latest"       # Dotfiles 跨设备同步工具
+bat     = "latest"       # cat替代品
+zellij  = "latest"       # Shell Session Management

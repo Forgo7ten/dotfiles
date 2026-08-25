@@ -1,0 +1,37 @@
+[tools]
+
+# --- Node包管理 ---
+# node包在node Path之前
+"npm:bash-language-server" = "latest" # Bash LSP (LazyVim 补全必备)
+"npm:@anthropic-ai/claude-code" = "latest"  # Claude
+"npm:@openai/codex" = "latest"              # codex
+
+# --- Core Languages & Runtimes ---
+go     = "latest"
+node   = "lts"
+ruby   = "latest"        # Ralph 工作流需要
+java   = "temurin-17"
+# python = "3.13"
+# rust = "latest"
+
+dotenvx = "latest"       # 跨平台环境变量加密与加载
+"github:d-kuro/gwq" = "latest" # 增强型 Git Worktree 管理
+
+# =============================================================================
+# GLOBAL SETTINGS
+# =============================================================================
+
+[settings]
+# 自动识别 Python 社区标准版本文件 (如 .python-version)
+idiomatic_version_file_enable_tools = ["python"]
+
+[settings.ruby]
+# 使用预编译二进制的ruby
+compile = false
+
+# asdf_compat = true              # 开启对 .tool-versions 的兼容
+# jobs = 8                        # 并行安装任务数
+
+## 编译python（而不是下载预编译版本）
+#[settings.python]
+#compile = true
