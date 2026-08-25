@@ -14,6 +14,12 @@ java   = "temurin-17"
 # python = "3.13"
 # rust = "latest"
 
+# --- Build Tools ---
+cmake = "latest"
+ninja = "latest"
+
+# --- Other ---
+
 dotenvx = "latest"       # 跨平台环境变量加密与加载
 "github:d-kuro/gwq" = "latest" # 增强型 Git Worktree 管理
 

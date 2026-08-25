@@ -13,6 +13,10 @@ java   = "temurin-17"
 # python = "3.13"
 # rust = "latest"        # 按需开启，建议配合 rustup 使用或由 mise 托管
 
+# --- Build Tools ---
+cmake = "latest"
+ninja = "latest"
+
 # --- Shell 工具 ---
 uv      = "latest"       # Python包管理
 eza     = "latest"       # ls 的现代替代品
