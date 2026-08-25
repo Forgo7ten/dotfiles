@@ -26,3 +26,23 @@
   type: "file"
   url: "https://raw.githubusercontent.com/eza-community/eza-themes/refs/heads/main/themes/tokyonight.yml"
   refreshPeriod: "720h"
+
+{{- if ne .system "server" }}
+
+# Rime 薄荷输入方案
+".local/share/rime/oh-my-rime":
+  type: "archive"
+  url: "https://github.com/Mintimate/oh-my-rime/archive/refs/heads/main.tar.gz"
+  stripComponents: 1
+  exact: false
+  refreshPeriod: "720h"
+  exclude:
+    - "*/dicts/custom_simple.dict.yaml"
+
+# Rime 万象语言模型
+".local/share/rime/oh-my-rime/wanxiang-lts-zh-hans.gram":
+  type: "file"
+  url: "https://github.com/amzxyz/RIME-LMDG/releases/download/LTS/wanxiang-lts-zh-hans.gram"
+  refreshPeriod: "720h"
+
+{{- end }}

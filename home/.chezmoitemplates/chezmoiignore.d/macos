@@ -5,3 +5,6 @@
 .zsh/local/os/linux.zsh
 
 .config/ghostty/linux.config
+
+# macOS 使用鼠须管入口
+.local/share/fcitx5/rime

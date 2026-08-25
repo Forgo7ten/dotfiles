@@ -1,0 +1,11 @@
+patch:
+  schema_list:
+    - schema: double_pinyin_flypy # 小鹤双拼
+    - schema: rime_mint # 薄荷拼音
+    - schema: rime_mint_flypy # 薄荷拼音-小鹤混输方案
+  menu:
+    page_size: 9
+  # 关闭 Shift 快速切换中英文（MAC中没有关闭ABC英文的时候需要）
+  # "ascii_composer/switch_key/Caps_Lock": noop
+  # "ascii_composer/switch_key/Shift_L": noop
+  # "ascii_composer/switch_key/Shift_R": inline_ascii

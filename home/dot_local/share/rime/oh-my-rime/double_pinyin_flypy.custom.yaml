@@ -1,0 +1,45 @@
+patch:
+  # 候选词个数
+  "menu/page_size": 9
+  # 候选框布局：横向（Linux Fcitx5-rime无法使用该配置设置）
+  # style/candidate_list_layout: linear
+
+  # 语言模型 https://github.com/amzxyz/RIME-LMDG/releases/tag/LTS
+  "grammar/language": wanxiang-lts-zh-hans
+  "grammar/collocation_max_length": 8
+  "grammar/collocation_min_length": 2
+  "grammar/collocation_penalty": -16
+  "grammar/non_collocation_penalty": -8
+  "grammar/weak_collocation_penalty": -100
+  "grammar/rear_penalty": -20
+  # translator 内加载
+  "translator/contextual_suggestions": true
+  "translator/max_homophones": 7
+  "translator/max_homographs": 7
+
+  # 设置「薄荷拼音-全拼输入」的拼音串最大长度为 30
+  codeLengthLimit_processor: 30
+
+  # 开启候选词带拼音选项
+  switches:
+    - name: ascii_mode
+      reset: 0
+      states: [ 中文, 英文 ]
+    - name: emoji_suggestion
+      states: [ "😣️","😁️"]
+      reset: 1
+    - name: full_shape
+      states: [ 半角, 全角 ]
+      reset: 0
+    - name: tone_display                  #开启后在输入编码的位置实时转换为带声调全拼，不开启则采用系统配置，影响的是preedit_format,归属：super_preedit.lua
+      states: [ 声杳, 声起 ]
+      reset: 1
+    - name: transcription
+      states: [ 简体 , 繁体 ]
+      reset: 0
+    - name: ascii_punct
+      states: [ "。，", "．，" ]
+      reset: 0
+    - name: chaifen        # 拆字滤镜
+      states: [ 🙈, 🐵 ]     # 快捷键 「Control+Shift+C」
+      reset: 0
