@@ -1,3 +1,10 @@
+# Zinit 本体由 chezmoi 负责首次获取；后续使用 `zinit self-update` 更新。
+".local/share/zinit/zinit.git":
+  type: "git-repo"
+  url: "https://github.com/zdharma-continuum/zinit.git"
+  pull:
+    args: ["--ff-only"]
+
 {{- $fontsPath := "" -}}
 {{- if eq .chezmoi.os "darwin" -}}
 {{-   $fontsPath = "Library/Fonts" -}}
