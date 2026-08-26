@@ -12,10 +12,6 @@ if [ "${DOTFILES_DEBUG:-}" ]; then
     set -x
 fi
 
-# 本脚本安装的工具会部署到 ~/.local/bin（如 mise），提前加入 PATH，
-# 供后续各工具的已安装检测统一使用 command -v
-export PATH="$HOME/.local/bin:$PATH"
-
 # 定义 macOS 对应的软件包列表
 readonly PACKAGES=(
     usbutils         # USB 设备信息查看工具
@@ -33,6 +29,7 @@ readonly PACKAGES=(
 
     temurin@21       # Java 21
 
+    mise             # 版本与运行时管理器
     uv               # Python 包和项目管理工具
     yazi             # 终端文件管理器
     usage            # usage-spec CLI 工具，mise 相关组件
@@ -102,20 +99,8 @@ function uninstall_brew_packages() {
     fi
 }
 
-# 安装 mise（版本/运行时管理器）
-# - 官方脚本默认安装到 ~/.local/bin/mise，幂等：已安装则跳过
-function install_mise() {
-    if command -v mise &> /dev/null; then
-        echo "mise is already installed, skipping."
-        return 0
-    fi
-
-    echo "Installing mise..."
-    curl https://mise.run | sh
-}
-
 function install_other_packages() {
-    install_mise
+    :
 }
 
 function main() {

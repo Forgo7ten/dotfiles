@@ -49,8 +49,8 @@
 {{- if ne $system "server" -}}
 
 {{- /* 设置AndroidSdk */ -}}
-{{- if and (hasKey . "tools") (hasKey .tools "andorid_sdk_ndk_version") -}}
-{{-   $ndkVersion = .tools.andorid_sdk_ndk_version -}}
+{{- if and (hasKey . "tools") (hasKey .tools "android_sdk_ndk_version") -}}
+{{-   $ndkVersion = .tools.android_sdk_ndk_version -}}
 {{- else -}}
 {{-   $ndkVersion = promptString "Ndk version for Android Sdk" $ndkVersion -}}
 {{- end -}}
@@ -103,7 +103,7 @@ data:
     jeb_home: {{ $jebHome | quote }}
     jadx_home: {{ $jadxHome | quote }}
     ida_home: {{ $idaHome | quote }}
-    andorid_sdk_ndk_version: {{ $ndkVersion | quote }}
+    android_sdk_ndk_version: {{ $ndkVersion | quote }}
     android_sdk_buildtools_version: {{ $buildtoolsVersion | quote }}
 {{- end }} {{- /* if ne $system "server" */}}
 

@@ -7,9 +7,7 @@ if [ "${DOTFILES_DEBUG:-}" ]; then
 fi
 
 function install_command_line_tool() {
-    local git_cmd_path="/Library/Developer/CommandLineTools/usr/bin/git"
-
-    if [ ! -e "${git_cmd_path}" ]; then
+    if ! xcode-select -p >/dev/null 2>&1; then
         # Install command line developer tool
         xcode-select --install
         # Want for user input
