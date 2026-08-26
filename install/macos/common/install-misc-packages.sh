@@ -18,6 +18,7 @@ export PATH="$HOME/.local/bin:$PATH"
 
 # 定义 macOS 对应的软件包列表
 readonly PACKAGES=(
+    usbutils         # USB 设备信息查看工具
     wget             # 文件下载
     jq               # JSON 查询、过滤和转换工具
     ripgrep          # 高性能文本搜索工具（rg）
@@ -29,6 +30,8 @@ readonly PACKAGES=(
     watch            # 周期性执行命令并刷新结果
     btop             # 系统资源和进程监控工具
     sevenzip         # 7zip
+
+    temurin@21       # Java 21
 
     uv               # Python 包和项目管理工具
     yazi             # 终端文件管理器
@@ -44,17 +47,21 @@ readonly PACKAGES=(
 
     gh               # GitHub 官方 CLI
     ghq              # Git 仓库目录管理工具
+
+    mole             # macOS 命令行清理与系统维护工具
 )
 
 # 定义 macOS 对应的 GUI 应用列表（brew install --cask 安装，brew 会自动处理已安装的项）
 readonly CASK_PACKAGES=(
-    cc-switch           # Claude Code / Codex API 供应商切换工具
-    visual-studio-code  # VS Code
-    010-editor          # 十六进制编辑器
-    omnidisksweeper     # 磁盘空间分析
-    dbx                 # dbx数据库
-    clash-verge-rev     # Clash 代理客户端
-    google-chrome       # Chrome 浏览器
+    squirrel-app                     # Rime 鼠鬚管
+    input-source-pro                 # 输入法切换管理
+    keka                             # 文件压缩与解压工具
+    visual-studio-code               # VS Code
+    010-editor                       # 十六进制编辑器
+    dbx                              # dbx数据库
+    clash-verge-rev                  # Clash 代理客户端
+    google-chrome                    # Chrome 浏览器
+    amir1376/tap/ab-download-manager # 下载管理器
 )
 
 # 检查 Homebrew 是否已安装
