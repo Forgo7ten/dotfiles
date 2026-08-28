@@ -20,12 +20,20 @@ brew install lihaoyun6/tap/quickrecorder
 brew install --cask iina
 # 增强鼠标功能（滚轮优化）
 brew install --cask mos
+# 菜单栏管理
+brew install --cask thaw
+# 截图工具
+brew install --cask realskyrin/tap/capcap
+# markdown编辑器
+brew install --cask typora
+
+# docker
+brew install orbstack
+
 # 增强鼠标功能（滚轮优化、按键映射等）
 brew install --cask mac-mouse-fix
 # 应用卸载工具（清理残留文件）
 brew install --cask appcleaner
-# docker
-brew install orbstack
 
 EOF
 

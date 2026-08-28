@@ -22,4 +22,9 @@ if command -v brew >/dev/null 2>&1; then
     done
 fi
 
+# --- 010 Editor 命令行工具 (010) ---
+{{- if stat "/Applications/010 Editor.app/Contents/CmdLine" }}
+export PATH="$PATH:/Applications/010 Editor.app/Contents/CmdLine" #ADDED BY 010 EDITOR
+{{- end }}
+
 {{- end }}

@@ -4,12 +4,15 @@
 
 {{- /* 配置 JADX */ -}}
 {{- if and (hasKey . "tools") (hasKey .tools "jadx_home") }}
-{{-   $jadxBin := printf "%s/bin/jadx" .tools.jadx_home -}}
-{{-   $jadxGui := printf "%s/bin/jadx-gui" .tools.jadx_home -}}
+{{-   $jadxBinPath := printf "%s/bin" .tools.jadx_home -}}
+{{-   $jadxGui := printf "%s/jadx-gui" $jadxBinPath -}}
 {{-   if stat $jadxGui }}
 # JADX Configuration
 export JADX_HOME="{{ .tools.jadx_home }}"
-alias jadx="{{ $jadxBin }}"
+{{-   if eq .chezmoi.os "linux" }}
+{{- /* 配置 Linux 下将 jadx 的 bin 目录加入 PATH */}}
+export PATH="$PATH:{{ $jadxBinPath }}"
+{{-   end }}
 __JADX_EXE="{{ $jadxGui }}"
 
 function jad() {

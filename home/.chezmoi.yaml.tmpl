@@ -73,14 +73,14 @@
 {{- if and (hasKey . "tools") (hasKey .tools "jadx_home") -}}
 {{-   $jadxHome = .tools.jadx_home -}}
 {{- else -}}
-{{-   $jadxHome = promptString "JADX Home Path" $jadxHome -}}
+{{-   $jadxHome = promptString "JADX Home Path" "/opt/homebrew/opt/jadx" -}}
 {{- end -}}
 
 {{- /* 配置 IDA_HOME */ -}}
 {{- if and (hasKey . "tools") (hasKey .tools "ida_home") -}}
 {{-   $idaHome = .tools.ida_home -}}
 {{- else -}}
-{{-   $idaHome = promptString "IDA Home Path" "/Applications/IDA Professional 9.2.app" -}}
+{{-   $idaHome = promptString "IDA Home Path" "/Applications/IDA Professional 9.3.app" -}}
 {{- end -}}
 
 {{- end }}  {{- /* if eq .chezmoi.os "darwin" */}}

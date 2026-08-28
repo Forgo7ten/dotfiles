@@ -58,7 +58,8 @@ readonly CASK_PACKAGES=(
     dbx                              # dbx数据库
     clash-verge-rev                  # Clash 代理客户端
     google-chrome                    # Chrome 浏览器
-    amir1376/tap/ab-download-manager # 下载管理器
+    ghost-downloader                 # 下载管理器
+    rectangle                        # 窗口分屏管理
 )
 
 # 检查 Homebrew 是否已安装
