@@ -1,0 +1,3 @@
+{{- /* 创建机器本地的 shell profile 文件（.bash_aliases / .pre_profile / .post_profile），
+缺失时补齐；.post_profile 新建时写入 .bash_aliases 加载片段。所有平台均执行。 */ -}}
+{{ include "../install/common/init-local-profiles.sh" }}
