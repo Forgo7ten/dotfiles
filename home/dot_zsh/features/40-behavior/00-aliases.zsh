@@ -66,12 +66,12 @@ if (( $+commands[ghq] )) && (( $+commands[fzf] )); then
       cd "$repo"
     fi
   }
-  fregister "ghqcd" "ghq 快速选择 跳转仓库"
+  mycmds describe "ghqcd" "ghq 快速选择 跳转仓库"
   ghqrm () {
     local repo=$(ghq list | fzf --query="$1" --prompt="Delete Repo > ")
     if [ -n "$repo" ]; then
       ghq rm "$repo"
     fi
   }
-  fregister "ghqrm" "ghq 快速选择 删除仓库"
+  mycmds describe "ghqrm" "ghq 快速选择 删除仓库"
 fi

@@ -1,11 +1,3 @@
-## ~/.local/bin/common
-fregister "dl-jadx" "下载jadx"
-fregister "dl-jeb" "下载jeb"
-fregister "jadx-remote" "远程调用jadx反编译"
-fregister "jeb-remote" "远程调用jeb反编译"
-fregister "killx" "快速杀死指定进程"
-fregister "docker-util" "docker快捷操作脚本"
-
 getip() {
     # 打印表格头部
     echo "+-----------------+-------------------------------+"
@@ -28,7 +20,7 @@ getip() {
     # 打印表格尾部
     echo "+-----------------+-------------------------------+"
 }
-fregister "getip" "获取网卡与ip地址"
+mycmds describe "getip" "获取网卡与ip地址"
 
 
 ## 设置代理
@@ -44,7 +36,7 @@ proxy_on() {
     
     echo "✅ Proxy ON: $addr"
 }
-fregister "proxy_on" "设置代理(默认127.0.0.1:7897)"
+mycmds describe "proxy_on" "设置代理(默认127.0.0.1:7897)"
 
 ## 清除代理
 proxy_off() {
@@ -52,7 +44,7 @@ proxy_off() {
     echo "❌ Proxy OFF"
 }
 alias unproxy='proxy_off'
-fregister "proxy_off/unproxy" "清除代理"
+mycmds describe "proxy_off/unproxy" "清除代理"
 
 ## 封装nohup
 nohu() {
@@ -84,7 +76,7 @@ nohu() {
         echo "Warning: Process $pid seems to have exited immediately. Check the log."
     fi
 }
-fregister "nohu" "在后台运行命令并输出日志到临时文件"
+mycmds describe "nohu" "在后台运行命令并输出日志到临时文件"
 
 ## git commit browser with fzf
 glf() {
@@ -97,7 +89,7 @@ glf() {
       --bind "ctrl-d:change-preview(echo {} | grep -o '[a-f0-9]\{7\}' | head -1 | xargs git show --color=always --name-only)" \
       --preview-window=right:60%
 }
-fregister "glf" "git log browser with fzf"
+mycmds describe "glf" "git log browser with fzf"
 
 gh-token() {
   if ! command -v gh &>/dev/null; then
@@ -117,7 +109,7 @@ gh-token() {
     return 1
   fi
 }
-fregister "gh-token" "设置 GitHub Token 环境变量"
+mycmds describe "gh-token" "设置 GitHub Token 环境变量"
 
 # -----------------------------------------------------------------------------
 # Python Helpers
@@ -125,11 +117,11 @@ fregister "gh-token" "设置 GitHub Token 环境变量"
 
 # Get local IP address via Python
 alias pyip="python3 -c \"import socket;print([(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1])\""
-fregister "pyip" "获取本地IP地址"
+mycmds describe "pyip" "获取本地IP地址"
 
 # Get current time via Python
 alias pytime="python3 -c \"import datetime; print(datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'))\""
-fregister "pytime" "获取当前时间"
+mycmds describe "pytime" "获取当前时间"
 
 ## 快速开启python http服务
 pyhttp(){
@@ -139,7 +131,7 @@ pyhttp(){
     echo "启动 Python HTTP 服务器，监听端口 $port..."
     python3 -m http.server "$port"
 }
-fregister "pyhttp" "快速开启python http服务"
+mycmds describe "pyhttp" "快速开启python http服务"
 
 export-secret-env() {
     # 禁用历史记录
@@ -186,5 +178,4 @@ export-secret-env() {
     # 恢复历史记录功能
     unset HISTFILE
 }
-fregister "export-secret-env" "导出 Secret 环境变量（隐藏命令历史）"
-
+mycmds describe "export-secret-env" "导出 Secret 环境变量（隐藏命令历史）"

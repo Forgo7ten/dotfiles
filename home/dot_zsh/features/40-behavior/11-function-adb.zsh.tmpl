@@ -80,7 +80,7 @@ aplapks(){
     
     echo -e "\n\033[32mFinished. All APKs saved to: $output_dir\033[0m"
 }
-fregister "aplapks" "提取设备中安装的所有apk文件到指定目录中"
+mycmds describe "aplapks" "提取设备中安装的所有apk文件到指定目录中"
 
 
 ## 提取匹配关键字的apk文件到当前目录下
@@ -111,7 +111,7 @@ aplapk() {
     done
     echo "Done."
 }
-fregister "aplapk" "提取匹配关键字的apk文件到当前目录下"
+mycmds describe "aplapk" "提取匹配关键字的apk文件到当前目录下"
 
 ## 获取 UID
 apuid(){
@@ -126,7 +126,7 @@ apuid(){
     fi
 }
 alias apuids="apuid"
-fregister "apuid/apuids" "获取设备中安装的所有(指定)应用的 UID"
+mycmds describe "apuid/apuids" "获取设备中安装的所有(指定)应用的 UID"
 
 ## 打开指定包名的应用详情页 (App Info)
 # @param pkg 包名 (支持模糊搜索，如果匹配到多个会提示)
@@ -160,5 +160,5 @@ apinfo() {
     echo "Opening info for: $target_pkg"
     $adb_exe -s "$selected_device" shell am start -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:"$target_pkg" > /dev/null
 }
-fregister "apinfo" "打开指定包名的设置 应用详情页"
+mycmds describe "apinfo" "打开指定包名的设置 应用详情页"
 {{ end }} {{- /* if ne $system "server" */}}

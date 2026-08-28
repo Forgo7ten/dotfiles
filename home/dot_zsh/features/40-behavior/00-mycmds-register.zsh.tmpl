@@ -1,0 +1,12 @@
+## ~/.local/bin/common
+mycmds describe "dl-jadx" "下载jadx"
+mycmds describe "dl-jeb" "下载jeb"
+mycmds describe "jadx-remote" "远程调用jadx反编译"
+mycmds describe "jeb-remote" "远程调用jeb反编译"
+mycmds describe "killx" "快速杀死指定进程"
+mycmds describe "docker-util" "docker快捷操作脚本"
+
+{{ if eq .chezmoi.os "darwin" -}}
+## ~/.local/bin/macos (仅 macOS 部署)
+mycmds describe "del-app-netflag.py" "扫描并去除 macOS 应用的联网/隔离标记(com.apple.quarantine)"
+{{- end }}

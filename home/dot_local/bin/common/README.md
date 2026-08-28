@@ -27,6 +27,7 @@ export JEB_REMOTE_JEB_FRONTEND_JAR=/path/to/jeb-apk-decompiler.jar
 ### 用法
 
 ```bash
+killx <pattern> [options]
 killx -n <pattern> [options]
 killx -p <port> [options]
 ```
@@ -44,6 +45,8 @@ killx -p <port> [options]
 预览匹配某个任务：
 
 ```bash
+./killx 'http.server'
+# 也可以显式使用 -n
 ./killx -n 'http.server'
 ```
 

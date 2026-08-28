@@ -2,8 +2,8 @@
 
 # killx: preview or terminate processes by full command line pattern or TCP listen port.
 # Examples:
-#   killx -n 'xxxProcess'
-#   killx -n 'xxxProcess' -y
+#   killx 'xxxProcess'
+#   killx 'xxxProcess' -y
 #   killx -p 8080
 #   killx -p 8080 -y -9
 
@@ -12,6 +12,7 @@ set -uo pipefail
 usage() {
   cat <<'EOF'
 Usage:
+  killx <pattern> [options]          (name mode, -n 可省)
   killx -n <pattern> [options]
   killx -p <port> [options]
 
@@ -26,10 +27,11 @@ Notes:
   Name mode uses pgrep -f, so it matches the full command line.
   Port mode uses lsof and only targets TCP LISTEN processes.
   Choose exactly one of -n/--name or -p/--port.
+  If no selector is given, the first non-option argument defaults to name mode.
 
 Examples:
-  killx -n 'xxxProcess'
-  killx -n 'xxxProcess' -y
+  killx 'xxxProcess'
+  killx 'xxxProcess' -y
   killx -p 8080
   killx -p 8080 -y -9
 EOF
@@ -128,6 +130,7 @@ signal_name="TERM"
   exit 1
 }
 
+
 while [ $# -gt 0 ]; do
   case "$1" in
     -n|--name)
@@ -160,7 +163,14 @@ while [ $# -gt 0 ]; do
       fail "Unknown option: $1"
       ;;
     *)
-      fail "Unexpected argument: $1"
+      # 无选择器时的首个裸参数默认按 name 模式处理（-n 可省）
+      if [ -z "$mode" ]; then
+        mode="name"
+        target="$1"
+      else
+        fail "Unexpected argument: $1"
+      fi
+      shift
       ;;
   esac
 done
