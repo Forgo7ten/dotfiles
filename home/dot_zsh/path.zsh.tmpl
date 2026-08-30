@@ -1,0 +1,61 @@
+# ~/.zsh/path.zsh
+# 供通用 Zsh 环境使用的 PATH 基础策略。
+# 这里维护通用 PATH 基础策略；平台 feature 仍可以追加专属路径。
+#
+# 该文件设计为可幂等执行：
+# - 每次 zsh 调用都会由 env.zsh 加载
+# - 系统登录初始化完成后会由 .zprofile 再次加载
+
+# 通用 PATH 组装块
+() {
+  typeset -gU PATH path
+
+  path=(
+    ${HOME}/.local/bin(N-/)
+    ${HOME}/.local/bin/common(N-/)
+{{- if eq .chezmoi.os "darwin" }}
+    ${HOME}/.local/bin/macos(N-/)
+{{- end }}
+    ${HOME}/.local/share/mise/shims
+    $path
+    /usr/local/{,s}bin(N-/)
+  )
+}
+
+{{- if ne .system "server" }}
+# Android PATH 注册块：只收集实际存在的 SDK、NDK 与 Build Tools 目录。
+() {
+  typeset -gU PATH path
+
+  local -a android_paths
+  local -a existing_android_paths
+  local p
+
+  android_paths=(
+    "$ANDROID_HOME/tools"
+    "$ANDROID_HOME/tools/bin"
+    "$ANDROID_HOME/platform-tools"
+  )
+
+{{- if and (hasKey . "tools") (hasKey .tools "android_sdk_ndk_version") }}
+  android_paths+=(
+    "$ANDROID_HOME/ndk/{{ .tools.android_sdk_ndk_version }}"
+  )
+{{- end }}
+
+{{- if and (hasKey . "tools") (hasKey .tools "android_sdk_buildtools_version") }}
+  android_paths+=(
+    "$ANDROID_HOME/build-tools/{{ .tools.android_sdk_buildtools_version }}"
+  )
+{{- end }}
+
+  for p in "${android_paths[@]}"; do
+    [[ -d "$p" ]] && existing_android_paths+=("$p")
+  done
+
+  path=(
+    $existing_android_paths
+    $path
+  )
+}
+{{- end }}

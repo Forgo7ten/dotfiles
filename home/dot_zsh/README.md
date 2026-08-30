@@ -7,9 +7,10 @@
 | 源文件 | 部署后的路径 | 作用 |
 | --- | --- | --- |
 | `dot_zshenv.tmpl` | `~/.zsh/.zshenv` | 由每次 Zsh 启动加载；设置 `ZDOTDIR`，并加载 `env.zsh`。 |
-| `dot_zprofile` | `~/.zsh/.zprofile` | 登录 shell 的预留入口，当前为空。 |
+| `dot_zprofile` | `~/.zsh/.zprofile` | 登录 shell 的入口；系统登录初始化后重新加载 `path.zsh`，恢复统一的 PATH 顺序。 |
 | `dot_zshrc` | `~/.zsh/.zshrc` | 交互式 shell 的启动引导；初始化补全路径，依次加载本机的 `.pre_profile`、`zshrc` 和 `.post_profile`。 |
-| `env.zsh.tmpl` | `~/.zsh/env.zsh` | 所有 Zsh 会话共享的环境设置，例如 PATH、mise shims、Android SDK 和 uv 路径。 |
+| `env.zsh.tmpl` | `~/.zsh/env.zsh` | 所有 Zsh 会话共享的环境设置；定义 Android SDK 根目录并加载统一的 `path.zsh`，同时设置 uv 等变量。 |
+| `path.zsh.tmpl` | `~/.zsh/path.zsh` | 通用 PATH 的主策略；可安全重复加载，维护用户工具、mise shims 和 Android SDK 路径。平台功能仍可追加专属路径。 |
 | `zshrc.tmpl` | `~/.zsh/zshrc` | 交互式配置主编排器；按顺序加载 `core/`、选定的 `managers/`、`features/`，最后加载 `local/override.zsh`。 |
 
 ## 一级目录
@@ -36,4 +37,4 @@
   → ~/.post_profile（若存在）
 ```
 
-`~/.zsh/.zshenv` 与 `~/.zsh/.zprofile` 由 Zsh 按 shell 类型分别加载，不属于上述交互式 `.zshrc` 链路；`.zshenv` 会先加载 `~/.zsh/env.zsh`。
+`~/.zsh/.zshenv` 与 `~/.zsh/.zprofile` 由 Zsh 按 shell 类型分别加载，不属于上述交互式 `.zshrc` 链路；`.zshenv` 会先加载 `~/.zsh/env.zsh`，再由 `env.zsh` 加载统一的 `~/.zsh/path.zsh`；登录 shell 的 `.zprofile` 会在系统登录初始化后再次加载同一文件，以恢复用户 PATH 优先级，而不是维护第二份 PATH。

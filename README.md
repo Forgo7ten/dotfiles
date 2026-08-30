@@ -38,9 +38,12 @@ flowchart LR
     end
 
     subgraph environment["~/.zsh/.zshenv 加载的文件"]
-        direction TB
+        direction LR
 
         Q["~/.zsh/env.zsh"]
+        R["~/.zsh/path.zsh（通用 PATH 主策略）"]
+
+        Q --> R
     end
 
     subgraph bootstrap["~/.zsh/.zshrc 加载的文件（从上到下）"]
@@ -72,6 +75,8 @@ flowchart LR
     system -->|"由 .zshrc 加载"| bootstrap
     bootstrap -->|"由 ~/.zsh/zshrc 加载"| config
 ```
+
+`~/.zsh/path.zsh` 负责通用 PATH 的基础策略。`.zshenv` 链路负责让所有 shell 获得基础 PATH；登录 shell 会先执行系统级 zprofile，再由 `~/.zsh/.zprofile` 加载同一文件，用于恢复用户 PATH 优先级。平台功能仍可在各自 feature 文件中追加专属路径。
 
 
 
