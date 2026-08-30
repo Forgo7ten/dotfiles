@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | `dot_zshenv.tmpl` | `~/.zsh/.zshenv` | 由每次 Zsh 启动加载；设置 `ZDOTDIR`，并加载 `env.zsh`。 |
 | `dot_zprofile` | `~/.zsh/.zprofile` | 登录 shell 的预留入口，当前为空。 |
-| `dot_zshrc` | `~/.zsh/.zshrc` | 交互式 shell 的启动引导；设置基础路径，依次加载本机的 `.pre_profile`、`zshrc` 和 `.post_profile`。 |
+| `dot_zshrc` | `~/.zsh/.zshrc` | 交互式 shell 的启动引导；初始化补全路径，依次加载本机的 `.pre_profile`、`zshrc` 和 `.post_profile`。 |
 | `env.zsh.tmpl` | `~/.zsh/env.zsh` | 所有 Zsh 会话共享的环境设置，例如 PATH、mise shims、Android SDK 和 uv 路径。 |
 | `zshrc.tmpl` | `~/.zsh/zshrc` | 交互式配置主编排器；按顺序加载 `core/`、选定的 `managers/`、`features/`，最后加载 `local/override.zsh`。 |
 

@@ -1,7 +1,7 @@
 DOCKER_IMAGE_NAME=dotfiles
 DOCKER_ARCH=x86_64
 DOCKER_NUM_CPU=4
-DOKCER_RAM_GB=4
+DOCKER_RAM_GB=4
 
 #
 # Docker
@@ -12,7 +12,7 @@ docker:
 	@if ! docker inspect $(DOCKER_IMAGE_NAME) &>/dev/null; then \
 		docker build -f docker/Dockerfile --network host -t $(DOCKER_IMAGE_NAME) . --build-arg USERNAME="$$(whoami)"; \
 	fi
-	docker run --network host -it -v "$$(pwd):/home/$$(whoami)/.local/share/chezmoi" dotfiles /bin/bash --login
+	docker run --network host -it -v "$$(pwd):/home/$$(whoami)/.local/share/chezmoi" $(DOCKER_IMAGE_NAME) /bin/bash --login
 
 #
 # Chezmoi

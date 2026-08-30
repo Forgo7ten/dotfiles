@@ -31,7 +31,14 @@ declare -r PRIVATE_DOTFILES_PATH="${HOME}/.local/share/chezmoi-private"
 declare -r PRIVATE_DOTFILES_CONFIG_PATH="${HOME}/.config/chezmoi-private/chezmoi.yaml"
 
 function is_ci() {
-    "${CI:-false}"
+  case "${CI:-}" in
+    1|true|yes)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
 }
 
 function is_tty() {

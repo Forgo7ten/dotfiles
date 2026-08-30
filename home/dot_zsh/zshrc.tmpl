@@ -1,8 +1,6 @@
 # ~/.zsh/zshrc
 # Real Zsh entry point (managed by chezmoi)
 
-ZSH_DIR="$HOME/.zsh"
-
 # --------------------------------------------------
 # 1. Load core configuration (plugin-independent)
 # --------------------------------------------------
@@ -22,12 +20,12 @@ done
 {{- if eq $zshScheme "zinit" }}
 
 # Plugin manager: zinit
-[[ -r "$ZSH_DIR/managers/zinit.zsh" ]] && source "$ZSH_DIR/managers/zinit.zsh"
+[[ -r "$ZDOTDIR/managers/zinit.zsh" ]] && source "$ZDOTDIR/managers/zinit.zsh"
 
 {{- else if eq $zshScheme "zimfw" }}
 
 # Plugin manager: zimfw
-[[ -r "$ZSH_DIR/managers/zimfw.zsh" ]] && source "$ZSH_DIR/managers/zimfw.zsh"
+[[ -r "$ZDOTDIR/managers/zimfw.zsh" ]] && source "$ZDOTDIR/managers/zimfw.zsh"
 
 {{- else if eq $zshScheme "none" }}
 
@@ -51,4 +49,4 @@ done
 # 4. Load local machine overrides
 # --------------------------------------------------
 
-[[ -r "$ZSH_DIR/local/override.zsh" ]] && source "$ZSH_DIR/local/override.zsh"
+[[ -r "$ZDOTDIR/local/override.zsh" ]] && source "$ZDOTDIR/local/override.zsh"
