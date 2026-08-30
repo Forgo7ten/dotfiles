@@ -115,8 +115,10 @@ _pkg() {
 
 ## 注册补全
 {{- $zshScheme := .zsh_scheme  -}}
-{{- if and (eq .chezmoi.os "darwin") (eq $zshScheme "zinit") }}
-.zinit-tmp-subst-on
+{{- if eq $zshScheme "zinit" }}
+# zinit内部函数，后面假如不支持了可能需要将 `compdef` -> `zicompdef`
+# 如果同步调用zicompinit 无需compdef假函数
+.zinit-tmp-subst-on compdef
 {{- end }}
 
 if command -v pkg >/dev/null; then
@@ -132,8 +134,8 @@ if command -v ida >/dev/null; then
     compdef _ida ida
 fi
 
-{{- if and (eq .chezmoi.os "darwin") (eq $zshScheme "zinit") }}
-.zinit-tmp-subst-off
+{{- if eq $zshScheme "zinit" }}
+.zinit-tmp-subst-off compdef
 {{- end }}
 
 {{- end }} {{- /* if ne .system "server" */}}

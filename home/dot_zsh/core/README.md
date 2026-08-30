@@ -24,15 +24,21 @@
 
 ## 与其他 Zsh 层的关系
 
-完整的主配置加载流程为：
+完整的交互式 Zsh 启动流程为：
 
 ```text
-core → managers → features → local
+~/.zshenv
+  → ~/.zshrc: .pre_profile
+  → ~/.zsh/zshrc: core → managers → features → local
+  → ~/.zshrc: .post_profile
 ```
 
-- `../managers/` 初始化 zinit 或 zimfw 等插件管理器。
+- `~/.zshenv` 在 Ubuntu 上设置 `skip_global_compinit=1`，阻止 `/etc/zsh/zshrc` 提前初始化补全；`compinit` 由所选插件管理器统一负责。
+- `../managers/` 初始化 zinit 或 zimfw 等插件管理器，并集中声明插件、补全与延迟加载阶段；具体顺序见 [`../managers/README.md`](../managers/README.md)。
 - `../features/` 放置依赖插件或外部工具的环境、别名和函数。
 - `../local/` 加载通用、操作系统及主机级差异配置。
-- `../zshrc.post.zsh.tmpl` 在主配置和用户本地 profile 之后完成最终插件配置。
+- `.pre_profile` 与 `.post_profile` 是机器本地覆盖层，分别位于主配置之前和之后，不由 chezmoi 管理。
+
+Zinit 的 Turbo 插件会在 manager 阶段完成声明，但可能在主配置加载结束后才实际执行；需要在 source 时立即可用的能力不得依赖延迟插件。
 
 修改本目录时遵循同目录 [`AGENTS.md`](AGENTS.md) 中的分层和验证约束。

@@ -2,8 +2,12 @@
 # Zinit plugin manager
 # ==================================================
 
-## p10k need
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zsh/.zshrc.
+## p10k 即时提示
+
+# 在即时提示前加载direnv 防闪烁（direnv path未注册）
+# (( ${+commands[direnv]} )) && emulate zsh -c "$(direnv export zsh)"
+
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
@@ -21,26 +25,28 @@ fi
 ZINIT_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/zinit/zinit.git"
 if [[ ! -r "$ZINIT_HOME/zinit.zsh" ]]; then
   print -P "%F{33}Installing Zinit (%F{220}zdharma-continuum/zinit%F{33})…%f"
-  command mkdir -p "$(dirname "$ZINIT_HOME")" \
-    && command git clone https://github.com/zdharma-continuum/zinit "$ZINIT_HOME" \
-    && print -P "%F{34}Zinit installation successful.%f" \
-    || print -P "%F{160}Zinit installation failed.%f"
+
+  if command mkdir -p "$(dirname "$ZINIT_HOME")" &&
+     command git clone https://github.com/zdharma-continuum/zinit "$ZINIT_HOME"; then
+    print -P "%F{34}Zinit installation successful.%f"
+  else
+    print -P "%F{160}Zinit installation failed.%f"
+    return 1
+  fi
 fi
 
 source "$ZINIT_HOME/zinit.zsh"
 
-autoload -Uz _zinit
-(( ${+_comps} )) && _comps[zinit]=_zinit
-
-
 ## zinit附件
 zinit light-mode for \
-  zdharma-continuum/zinit-annex-bin-gem-node \
-  zdharma-continuum/zinit-annex-patch-dl \
-  zdharma-continuum/zinit-annex-readurl \
   zdharma-continuum/zinit-annex-binary-symlink \
-  zdharma-continuum/zinit-annex-submods \
   zdharma-continuum/zinit-annex-link-man
+
+## 暂未使用
+# zdharma-continuum/zinit-annex-bin-gem-node \
+# zdharma-continuum/zinit-annex-patch-dl \
+# zdharma-continuum/zinit-annex-readurl \
+# zdharma-continuum/zinit-annex-submods \
 
 # --------------------------------------------------
 # 2. 初始化 Oh My Zsh
@@ -60,13 +66,11 @@ zinit lucid light-mode for \
   OMZL::functions.zsh \
   \
   OMZL::clipboard.zsh \
-  OMZL::cli.zsh \
   OMZL::correction.zsh \
   OMZL::grep.zsh \
   OMZL::history.zsh \
   OMZL::key-bindings.zsh \
   OMZL::misc.zsh \
-  OMZL::compfix.zsh \
   OMZL::completion.zsh \
   OMZL::termsupport.zsh
 
@@ -78,6 +82,8 @@ zinit lucid light-mode for \
 # zinit snippet OMZL::vcs_info.zsh
 # OMZL::theme-and-appearance.zsh # 加载ls颜色（延迟加载会顶替掉eza的别名）
 ## 忽略掉的一些：
+# OMZL::cli.zsh      用不到omz命令
+# OMZL::compfix.zsh  只定义了一个函数，没有调用
 # OMZL::diagnostics.zsh 仅用于调试 OMZ
 # OMZL::spectrum.zsh 仅用于定义终端颜色变量
 
@@ -89,24 +95,96 @@ zinit lucid light-mode for \
 # They are safe to load asynchronously.
 
 # 定义插件列表数组
-local -a ld_plugins=(
+typeset -a ld_plugins=(
+  # Git
   OMZP::git                # Git 基础增强
+  OMZP::gitignore          # gi: 查询 gitignore 模板。
+
+  # Docker
+  OMZP::docker
+  OMZP::docker-compose
+
+  # SSH
+  OMZP::ssh
+
+  # Clipboard
   OMZP::copypath           # copypath: 复制当前路径
   OMZP::copyfile           # copyfile: 复制文件内容到系统剪贴板
   OMZP::copybuffer         # ctrl-o 快捷键拷贝当前命令行缓冲区的命令
+
+  # Utils
   OMZP::sudo               # 按两次 Esc 加 sudo
   OMZP::extract            # x: 解压压缩包
-  OMZP::gitignore          # gi: 查询 gitignore 模板。
   OMZP::cp                 # cpv: 做rsync 的别名
   OMZP::command-not-found  # 缺失命令提示
-  # OMZP::z                  # z: 目录快速跳转
-  # OMZP::autojump           # 目录跳转增强
+
+  # Shell UX
+  OMZP::colored-man-pages
+  OMZP::aliases
+  OMZP::bgnotify
+
   MichaelAquilina/zsh-you-should-use # 有别名时提示使用
 )
 
-# 一次性交给 Zinit 加载
-zinit wait lucid light-mode for "${ld_plugins[@]}"
+# Linux + systemd
+if [[ "$OSTYPE" == linux* ]] && (( $+commands[systemctl] )); then
+  ld_plugins+=(OMZP::systemd)
+fi
 
+# macOS
+if [[ "$OSTYPE" == darwin* ]]; then
+  ld_plugins+=(OMZP::macos)
+fi
+
+# 一次性交给 Zinit 加载
+zinit wait"0a" lucid light-mode for "${ld_plugins[@]}"
+unset ld_plugins
+
+# 首次 zicompinit 前应准备好 fpath；后面不应该再改动fpath
+# 之后新增 completion/fpath 时，需要重新执行 compinit
+## zsh-completions: 补全
+zinit wait"0b" lucid for \
+  blockf \
+  atload'
+    ZINIT[COMPINIT_OPTS]=-C
+    zicompinit
+    zicdreplay
+  ' \
+    zsh-users/zsh-completions
+
+
+## fzf shell 集成（二进制由 macOS Homebrew 或 Linux mise 管理）
+# Ctrl+R 搜索命令历史
+# Ctrl+T 搜索当前目录下的文件
+# Alt+C  搜索当前目录下的目录
+## Aloxaf/fzf-tab: 拦截tab
+## fast-syntax-highlighting: 高亮 （比zsh--syntax-highlighting 多了子命令的解析）
+## zsh-autosuggestions: 补全建议
+## zsh-history-substring-search: 不必输入命令开头就能使用⬆⬇查找历史命令
+# 顺序由fzf-tab和zsh-history-substring-search要求 必须在zicompinit之后加载
+zinit wait"0c" lucid for \
+  atinit'
+    # 激活fzf
+    (( $+commands[fzf] )) && source <(fzf --zsh)
+  ' \
+    Aloxaf/fzf-tab \
+    zdharma-continuum/fast-syntax-highlighting \
+  atload"!_zsh_autosuggest_start" \
+    zsh-users/zsh-autosuggestions \
+  atload'
+    bindkey "^[[A" history-substring-search-up
+    bindkey "^[[B" history-substring-search-down
+    bindkey "$terminfo[kcuu1]" history-substring-search-up
+    bindkey "$terminfo[kcud1]" history-substring-search-down
+
+    bindkey -M vicmd "k" history-substring-search-up
+    bindkey -M vicmd "j" history-substring-search-down
+  ' \
+    zsh-users/zsh-history-substring-search
+
+# compinit -C 启动时不会检查补全文件变化；
+# 手动修改 fpath / completion 文件时需要刷新 .zcompdump。
+# Zinit 管理的 completion 使用 zi creinstall 时会自动刷新。
 
 # --------------------------------------------------
 # 3. 初始化 Prompt / Theme
@@ -118,6 +196,7 @@ zinit wait lucid light-mode for "${ld_plugins[@]}"
 # zinit ice pick"gitstatus.prompt.zsh"
 # zinit load romkatv/gitstatus
 
+# P10k 本体保持同步加载，避免 Turbo 异步加载造成二次 prompt 刷新/闪烁。
 zinit ice depth=1; zinit light romkatv/powerlevel10k
 [[ ! -f $HOME/.config/powerlevel10k/p10k.zsh ]] || source $HOME/.config/powerlevel10k/p10k.zsh
 
@@ -126,30 +205,23 @@ zinit ice depth=1; zinit light romkatv/powerlevel10k
 # --------------------------------------------------
 
 # load direnv
-zinit light-mode from"gh-r" as"program" mv"direnv* -> direnv" \
+zinit light-mode from"gh-r" mv"direnv* -> direnv" \
   atclone"chmod +x ./direnv; ./direnv hook zsh > direnv-hook.zsh" atpull"%atclone" \
-  sbin"direnv" pick"direnv-hook.zsh" src="direnv-hook.zsh" \
+  lbin"!direnv" pick"/dev/null" src="direnv-hook.zsh" \
   for direnv/direnv
 
 
 ## load zoxide: 'z' 目录快速跳转
-zinit light-mode wait"1" lucid from"gh-r" \
+zinit light-mode wait"0c" lucid from"gh-r" \
   atclone"./zoxide init zsh > zoxide-init.zsh" atpull"%atclone" \
-  sbin"zoxide" pick"/dev/null" src"zoxide-init.zsh" \
+  lbin"!zoxide" pick"/dev/null" src"zoxide-init.zsh" \
+  lman \
   for ajeetdsouza/zoxide
 
 ## zsh vim模式
 #zinit ice depth=1
 #zinit light jeffreytse/zsh-vi-mode
 
-## fzf shell 集成（二进制由 macOS Homebrew 或 Linux mise 管理）
-# Ctrl+R 搜索命令历史
-# Ctrl+T 搜索当前目录下的文件
-# Alt+C  搜索当前目录下的目录
-zinit wait'1' lucid light-mode for \
-  id-as"local/fzf" as"null" \
-  atload'(( $+commands[fzf] )) && source <(fzf --zsh)' \
-  zdharma-continuum/null
 
 # thefuck 配置(不存在时忽略报错、不会自动安装)
 zinit wait'1' lucid light-mode for \
@@ -169,24 +241,34 @@ zinit light zdharma-continuum/null
 ## 生成一些工具的补全
 # use `zi update local/completions` to update
 # 部分工具由 mise 管理；执行 mise install 后需手动 update
-zinit wait"1" lucid light-mode \
+zinit wait"1c" lucid light-mode \
   id-as"local/completions" \
   atclone'
-  # 定义内部辅助匿名函数
   gen() {
-    if command -v "$1" > /dev/null 2>&1; then
-      eval "$2" > "_$1"
-      echo "Successfully generated completion for $1"
+    local name="$1"
+    shift
+
+    (( $+commands[$name] )) || return 0
+
+    if "$@" > "_${name}.tmp"; then
+      mv -f "_${name}.tmp" "_${name}"
+      print "Successfully generated completion for $name"
     else
-      # echo "Skip: $1 not found"
+      rm -f "_${name}.tmp"
+      print -u2 "Failed to generate completion for $name"
+      return 1
     fi
   }
-  echo "Adding completions..."
-  gen "zellij"  "zellij setup --generate-completion zsh"
-  gen "uv"      "uv generate-shell-completion zsh"
-  gen "gh"      "gh completion -s zsh"
-  gen "chezmoi" "chezmoi completion zsh"
-  gen "mise"    "mise completion zsh"
+
+  print "Adding completions..."
+
+  gen zellij  zellij setup --generate-completion zsh
+  gen uv      uv generate-shell-completion zsh
+  gen gh      gh completion -s zsh
+  gen chezmoi chezmoi completion zsh
+  gen mise    mise completion zsh
+
+  unfunction gen
 
   zi creinstall local/completions
   ' \
