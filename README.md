@@ -28,33 +28,49 @@ flowchart LR
 
     subgraph system["Zsh 按 shell 类型分别加载"]
         direction TB
+
         B["~/.zsh/.zshenv"]
         P["~/.zsh/.zprofile"]
         C["~/.zsh/.zshrc"]
+
+        B ~~~ P
+        P ~~~ C
     end
-    A -->|软链接| B
+
+    subgraph environment["~/.zsh/.zshenv 加载的文件"]
+        direction TB
+
+        Q["~/.zsh/env.zsh"]
+    end
 
     subgraph bootstrap["~/.zsh/.zshrc 加载的文件（从上到下）"]
         direction TB
+
         D["~/.pre_profile（若存在）"]
         E["~/.zsh/zshrc"]
         F["~/.post_profile（若存在）"]
+
+        D ~~~ E
+        E ~~~ F
     end
-    C -->|1| D
-    C -->|2| E
-    C -->|3| F
 
     subgraph config["~/.zsh/zshrc 加载的文件（从上到下）"]
         direction TB
+
         G["~/.zsh/core/*"]
         H["~/.zsh/managers/*"]
         I["~/.zsh/features/*"]
         J["~/.zsh/local/override.zsh（若存在）"]
+
+        G ~~~ H
+        H ~~~ I
+        I ~~~ J
     end
-    E -->|1| G
-    E -->|2| H
-    E -->|3| I
-    E -->|4| J
+
+    A -->|软链接| system
+    system -->|"由 .zshenv 加载"| environment
+    system -->|"由 .zshrc 加载"| bootstrap
+    bootstrap -->|"由 ~/.zsh/zshrc 加载"| config
 ```
 
 

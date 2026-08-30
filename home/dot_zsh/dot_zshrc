@@ -2,16 +2,9 @@
 # $ZDOTDIR/.zshrc — bootstrap only (managed by chezmoi)
 
 #
-# Path settings
+# Completion path
 #
-typeset -gU path fpath
-path=(
-    ${HOME}/.local/bin(N-/)
-    ${HOME}/.local/bin/common(N-/)
-    ${HOME}/.local/bin/macos(N-/)
-    $path
-    /usr/local/{,s}bin(N-/)
-)
+typeset -gU fpath
 fpath=(
     $fpath
     ${HOME}/.local/share/zsh/completions(N-/)

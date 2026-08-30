@@ -18,7 +18,7 @@ Turbo 阶段在 manager 文件中完成声明，但可能在主配置加载结�
 
 ## 补全与 ZLE 顺序
 
-- Ubuntu 的 `~/.zshenv` 设置 `skip_global_compinit=1`，避免 `/etc/zsh/zshrc` 提前调用 `compinit`；Zinit 在 `0b` 阶段统一初始化补全。
+- Ubuntu 的 `~/.zsh/env.zsh` 设置 `skip_global_compinit=1`，该文件由 `~/.zsh/.zshenv` 加载，避免 `/etc/zsh/zshrc` 提前调用 `compinit`；Zinit 在 `0b` 阶段统一初始化补全。
 - `compinit` 运行前的直接 `compdef` 必须由 Zinit 临时捕获，并在 `zicompinit` 后通过 `zicdreplay` 重放。
 - `zsh-completions` 必须先于 `compinit` 准备好补全路径。
 - fzf-tab 必须在 `compinit` 之后、会包装 ZLE widgets 的插件之前加载。

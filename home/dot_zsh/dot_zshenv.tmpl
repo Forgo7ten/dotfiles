@@ -4,8 +4,4 @@
 # 修改 zsh配置主目录
 ZDOTDIR="$HOME/.zsh"
 
-{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.osRelease.id "ubuntu") }}
-# Ubuntu initializes compinit globally in /etc/zsh/zshrc.
-# 让Zinit来管理compinit
-skip_global_compinit=1
-{{- end -}}
+[[ -r "$ZDOTDIR/env.zsh" ]] && source "$ZDOTDIR/env.zsh"
