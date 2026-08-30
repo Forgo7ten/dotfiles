@@ -94,51 +94,53 @@ zinit lucid light-mode for \
 # Plugins assume OMZ libs are already loaded.
 # They are safe to load asynchronously.
 
-# 定义插件列表数组
-typeset -a ld_plugins=(
-  # Git
-  OMZP::git                # Git 基础增强
-  OMZP::gitignore          # gi: 查询 gitignore 模板。
+# 使用匿名函数隔离临时插件数组，避免污染全局参数空间
+() {
+  # 定义插件列表数组
+  local -a ld_plugins=(
+    # Git
+    OMZP::git                # Git 常用别名与辅助函数
+    OMZP::gitignore          # gi: 查询并生成 gitignore 模板
 
-  # Docker
-  OMZP::docker
-  OMZP::docker-compose
+    # Docker
+    OMZP::docker             # Docker 常用命令别名与补全增强
+    OMZP::docker-compose     # Docker Compose 常用命令别名与补全增强
 
-  # SSH
-  OMZP::ssh
+    # SSH
+    OMZP::ssh                # SSH 主机名等补全增强
 
-  # Clipboard
-  OMZP::copypath           # copypath: 复制当前路径
-  OMZP::copyfile           # copyfile: 复制文件内容到系统剪贴板
-  OMZP::copybuffer         # ctrl-o 快捷键拷贝当前命令行缓冲区的命令
+    # Clipboard
+    OMZP::copypath           # copypath: 复制当前目录或指定路径到剪贴板
+    OMZP::copyfile           # copyfile: 复制文件内容到系统剪贴板
+    OMZP::copybuffer         # Ctrl-O: 复制当前命令行缓冲区内容
 
-  # Utils
-  OMZP::sudo               # 按两次 Esc 加 sudo
-  OMZP::extract            # x: 解压压缩包
-  OMZP::cp                 # cpv: 做rsync 的别名
-  OMZP::command-not-found  # 缺失命令提示
+    # Utils
+    OMZP::sudo               # 双击 Esc: 给当前命令添加或移除 sudo
+    OMZP::extract            # x: 根据文件类型自动选择工具解压
+    OMZP::cp                 # cpv: 使用 rsync 实现带进度信息的复制
+    OMZP::command-not-found  # 命令不存在时提供安装包/命令提示
 
-  # Shell UX
-  OMZP::colored-man-pages
-  OMZP::aliases
-  OMZP::bgnotify
+    # Shell UX
+    OMZP::colored-man-pages  # 为 man 手册页增加彩色显示
+    OMZP::aliases            # 提供 alias 查询、搜索等辅助功能
+    OMZP::bgnotify           # 长时间命令结束且终端失焦时发送桌面通知
 
-  MichaelAquilina/zsh-you-should-use # 有别名时提示使用
-)
+    MichaelAquilina/zsh-you-should-use # 输入存在别名的命令时提示优先使用别名
+  )
 
-# Linux + systemd
-if [[ "$OSTYPE" == linux* ]] && (( $+commands[systemctl] )); then
-  ld_plugins+=(OMZP::systemd)
-fi
+  # Linux + systemd
+  if [[ "$OSTYPE" == linux* ]] && (( $+commands[systemctl] )); then
+    ld_plugins+=(OMZP::systemd) # systemctl / journalctl 等 systemd 命令的快捷别名
+  fi
 
-# macOS
-if [[ "$OSTYPE" == darwin* ]]; then
-  ld_plugins+=(OMZP::macos)
-fi
+  # macOS
+  if [[ "$OSTYPE" == darwin* ]]; then
+    ld_plugins+=(OMZP::macos)   # macOS 专用快捷命令和 Finder 等系统辅助函数
+  fi
 
-# 一次性交给 Zinit 加载
-zinit wait"0a" lucid light-mode for "${ld_plugins[@]}"
-unset ld_plugins
+  # 一次性交给 Zinit 加载
+  zinit wait"0a" lucid light-mode for "${ld_plugins[@]}"
+}
 
 # 首次 zicompinit 前应准备好 fpath；后面不应该再改动fpath
 # 之后新增 completion/fpath 时，需要重新执行 compinit

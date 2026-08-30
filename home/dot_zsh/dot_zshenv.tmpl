@@ -1,3 +1,8 @@
+# ~/.zsh/.zshenv
+# Loaded by every zsh invocation.
+
+# 修改 zsh配置主目录
+ZDOTDIR="$HOME/.zsh"
 
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.osRelease.id "ubuntu") }}
 # Ubuntu initializes compinit globally in /etc/zsh/zshrc.

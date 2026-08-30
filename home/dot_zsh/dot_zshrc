@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# ~/.zshrc — bootstrap only (managed by chezmoi)
+# $ZDOTDIR/.zshrc — bootstrap only (managed by chezmoi)
 
 #
 # Path settings
@@ -23,11 +23,6 @@ fpath=(
 if [[ -f "$HOME/.pre_profile" ]]; then
   source "$HOME/.pre_profile"
 fi
-
-# --------------------------------------------------
-# ZDOTDIR setup
-# --------------------------------------------------
-export ZDOTDIR="$HOME/.zsh"
 
 # --------------------------------------------------
 # Load real zsh configuration
