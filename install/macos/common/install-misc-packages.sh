@@ -26,6 +26,7 @@ readonly PACKAGES=(
     watch            # 周期性执行命令并刷新结果
     btop             # 系统资源和进程监控工具
     sevenzip         # 7zip
+    nvim             # Neovim 编辑器
 
     temurin@21       # Java 21
 

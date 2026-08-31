@@ -49,9 +49,9 @@ flowchart LR
     subgraph bootstrap["~/.zsh/.zshrc 加载的文件（从上到下）"]
         direction TB
 
-        D["~/.pre_profile（若存在）"]
+        D["~/.zshrc.pre（若存在）"]
         E["~/.zsh/zshrc"]
-        F["~/.post_profile（若存在）"]
+        F["~/.zshrc（若存在）"]
 
         D ~~~ E
         E ~~~ F

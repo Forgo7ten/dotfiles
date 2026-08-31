@@ -4,7 +4,7 @@
 
 ## Zinit 加载阶段
 
-[`zinit.zsh`](zinit.zsh) 的主要阶段为：
+[`zinit.zsh.tmpl`](zinit.zsh.tmpl) 的主要阶段为（部署后目标文件为 `~/.zsh/managers/zinit.zsh`）：
 
 | 阶段 | 内容 | 约束 |
 | --- | --- | --- |

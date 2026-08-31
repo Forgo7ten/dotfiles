@@ -13,8 +13,8 @@ fpath=(
 # --------------------------------------------------
 # Machine-local pre profile
 # --------------------------------------------------
-if [[ -f "$HOME/.pre_profile" ]]; then
-  source "$HOME/.pre_profile"
+if [[ -f "$HOME/.zshrc.pre" ]]; then
+  source "$HOME/.zshrc.pre"
 fi
 
 # --------------------------------------------------
@@ -27,8 +27,8 @@ fi
 # --------------------------------------------------
 # Machine-local post profile
 # --------------------------------------------------
-if [[ -f "$HOME/.post_profile" ]]; then
-  source "$HOME/.post_profile"
+if [[ -f "$HOME/.zshrc" ]]; then
+  source "$HOME/.zshrc"
 fi
 
 # ---------------------- END -----------------------

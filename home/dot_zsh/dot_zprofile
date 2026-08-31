@@ -1,6 +1,10 @@
 # ~/.zsh/.zprofile
 # 登录 zsh 在系统级 zprofile 之后加载。
-# 系统登录初始化可能修改或重新排列 PATH（尤其是 macOS 的 path_helper），
-# 因此这里重新应用通用 PATH 基础策略。
 
+if [[ -f "$HOME/.zprofile" ]]; then
+  source "$HOME/.zprofile"
+fi
+
+# 系统登录初始化可能修改或重新排列 PATH（尤其是 macOS 的 path_helper）
+# 因此这里重新应用通用 PATH 基础策略。
 [[ -r "$ZDOTDIR/path.zsh" ]] && source "$ZDOTDIR/path.zsh"

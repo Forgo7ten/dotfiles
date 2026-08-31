@@ -212,6 +212,16 @@ zinit light-mode from"gh-r" mv"direnv* -> direnv" \
   lbin"!direnv" pick"/dev/null" src="direnv-hook.zsh" \
   for direnv/direnv
 
+# 这里放置一些 初始化会修改fpath、需在compinit之前加载的一些工具
+zinit wait'0a' lucid light-mode \
+  id-as"local/software-init-pre-compinit" \
+  atload'
+{{- if eq .chezmoi.os "darwin" }}
+    # 初始化Homebrew
+    [[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv zsh)"
+{{- end }}
+  ' \
+  for zdharma-continuum/null
 
 ## load zoxide: 'z' 目录快速跳转
 zinit light-mode wait"0c" lucid from"gh-r" \
