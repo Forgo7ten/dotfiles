@@ -9,9 +9,7 @@ DOCKER_RAM_GB=4
 
 .PHONY: docker
 docker:
-	@if ! docker inspect $(DOCKER_IMAGE_NAME) &>/dev/null; then \
-		docker build -f docker/Dockerfile --network host -t $(DOCKER_IMAGE_NAME) . --build-arg USERNAME="$$(whoami)"; \
-	fi
+	docker build -f docker/Dockerfile --network host -t $(DOCKER_IMAGE_NAME) . --build-arg USERNAME="$$(whoami)"
 	docker run --network host -it -v "$$(pwd):/home/$$(whoami)/.local/share/chezmoi" $(DOCKER_IMAGE_NAME) /bin/bash --login
 
 #
@@ -35,6 +33,7 @@ watch:
 .PHONY: reset
 reset:
 	chezmoi state delete-bucket --bucket=scriptState
+	chezmoi state delete-bucket --bucket=entryState
 
 .PHONY: reset-config
 reset-config:
