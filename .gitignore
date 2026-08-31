@@ -5,8 +5,4 @@ Thumbs.db
 # Editor config
 /.vscode/
 
-/examples/
-
-/bin/
-
 /.omc/

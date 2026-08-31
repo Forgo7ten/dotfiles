@@ -18,6 +18,33 @@ bash -c "$(curl -fsLS https://raw.githubusercontent.com/Forgo7ten/dotfiles/main/
 bash -c "$(wget -qO - https://raw.githubusercontent.com/Forgo7ten/dotfiles/main/setup.sh)"
 ```
 
+## CI 与本地验证
+
+日常提交前使用 Docker 运行静态检查及 Ubuntu 22.04 的 client/server smoke：
+
+```bash
+make test
+```
+
+完整 Linux smoke matrix、单个 role、完整 provisioning 与 bootstrap 分别使用：
+
+```bash
+make test-all
+make test-role TEST_ROLE=server
+make test-full TEST_ROLE=server
+make test-bootstrap
+```
+
+Docker 构建和容器会转发宿主机已设置的标准 HTTP/HTTPS 代理变量。`test-full` 与 `test-bootstrap` 会在一次性容器中执行安装脚本及 externals；日常 `make test` 不会执行这些副作用步骤。
+
+本地 Linux 构建会自动将当前用户的 UID/GID 传入 Docker，以兼容 bind mount；GitHub Actions 与其他平台使用 Dockerfile 的默认 UID/GID。
+
+macOS 的 Darwin 模板、`/etc/zprofile` 与 `path_helper` 只能在真实 macOS 环境中验证：
+
+```bash
+make test-native-macos
+```
+
 ## Zsh 加载顺序
 
 部署后，Zsh 从 `~/.zshenv` 开始，按以下真实文件顺序加载：

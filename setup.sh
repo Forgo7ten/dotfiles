@@ -23,7 +23,7 @@ declare -r DOTFILES_LOGO='
                      https://github.com/Forgo7ten/dotfiles
 '
 
-declare -r DOTFILES_REPO_URL="https://github.com/Forgo7ten/dotfiles"
+declare -r DOTFILES_REPO_URL="${DOTFILES_REPO_URL:-https://github.com/Forgo7ten/dotfiles}"
 declare -r BRANCH_NAME="${BRANCH_NAME:-main}"
 
 declare -r PRIVATE_DOTFILES_REPO_URL="https://github.com/Forgo7ten/dotfiles-private"

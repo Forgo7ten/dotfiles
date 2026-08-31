@@ -1,2 +1,6 @@
 .git
 .gitignore
+
+.DS_Store
+.vscode
+.omc

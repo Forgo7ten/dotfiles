@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      full:
+        description: "Run full provisioning and bootstrap tests"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}"
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
+
+env:
+  CHEZMOI_VERSION: "2.72.0"
+
+jobs:
+  static:
+    name: Static checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run static checks
+        run: |
+          make test-static \
+            UBUNTU_VERSION=22.04 \
+            CHEZMOI_VERSION="${CHEZMOI_VERSION}"
+
+  linux-smoke:
+    name: Linux ${{ matrix.ubuntu }} / ${{ matrix.role }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu:
+          - "22.04"
+          - "24.04"
+        role:
+          - client
+          - server
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run Linux smoke test
+        run: |
+          make test-role \
+            UBUNTU_VERSION="${{ matrix.ubuntu }}" \
+            TEST_ROLE="${{ matrix.role }}" \
+            CHEZMOI_VERSION="${CHEZMOI_VERSION}"
+
+  macos-smoke:
+    name: macOS 15 / client
+    runs-on: macos-15
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run native macOS smoke test
+        run: |
+          make test-native-macos \
+            CHEZMOI_VERSION="${CHEZMOI_VERSION}"
+
+  full-linux:
+    name: Full provisioning / ${{ matrix.role }}
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' && inputs.full
+      }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    strategy:
+      fail-fast: false
+      matrix:
+        role:
+          - client
+          - server
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run full provisioning
+        run: |
+          make test-full \
+            UBUNTU_VERSION=22.04 \
+            TEST_ROLE="${{ matrix.role }}" \
+            CHEZMOI_VERSION="${CHEZMOI_VERSION}"
+
+  bootstrap:
+    name: setup.sh bootstrap
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' && inputs.full
+      }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run setup.sh end-to-end
+        run: |
+          make test-bootstrap \
+            UBUNTU_VERSION=22.04 \
+            CHEZMOI_VERSION="${CHEZMOI_VERSION}"
