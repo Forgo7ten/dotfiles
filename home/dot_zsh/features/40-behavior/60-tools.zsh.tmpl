@@ -114,8 +114,8 @@ _pkg() {
 }
 
 ## 注册补全
-{{- $zshScheme := .zsh_scheme  -}}
-{{- if eq $zshScheme "zinit" }}
+{{- $zshManager := .shell.zsh.manager  -}}
+{{- if eq $zshManager "zinit" }}
 # zinit内部函数，后面假如不支持了可能需要将 `compdef` -> `zicompdef`
 # 如果同步调用zicompinit 无需compdef假函数
 .zinit-tmp-subst-on compdef
@@ -134,7 +134,7 @@ if command -v ida >/dev/null; then
     compdef _ida ida
 fi
 
-{{- if eq $zshScheme "zinit" }}
+{{- if eq $zshManager "zinit" }}
 .zinit-tmp-subst-off compdef
 {{- end }}
 

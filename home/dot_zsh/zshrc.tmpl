@@ -15,25 +15,25 @@ done
 # 2. Load plugin manager (decided at template time)
 # --------------------------------------------------
 
-{{- $zshScheme := .zsh_scheme  -}}
+{{- $zshManager := .shell.zsh.manager -}}
 
-{{- if eq $zshScheme "zinit" }}
+{{- if eq $zshManager "zinit" }}
 
 # Plugin manager: zinit
 [[ -r "$ZDOTDIR/managers/zinit.zsh" ]] && source "$ZDOTDIR/managers/zinit.zsh"
 
-{{- else if eq $zshScheme "zimfw" }}
+{{- else if eq $zshManager "zimfw" }}
 
 # Plugin manager: zimfw
 [[ -r "$ZDOTDIR/managers/zimfw.zsh" ]] && source "$ZDOTDIR/managers/zimfw.zsh"
 
-{{- else if eq $zshScheme "none" }}
+{{- else if eq $zshManager "none" }}
 
 # Plugin manager: none (explicitly disabled)
 
 {{- else }}
 
-{{ fail (printf "Invalid zsh.manager value: %q (supported: zinit, zimfw, none)" $zshScheme) }}
+{{ fail (printf "Invalid zsh.manager value: %q (supported: zinit, zimfw, none)" $zshManager) }}
 
 {{- end }}
 

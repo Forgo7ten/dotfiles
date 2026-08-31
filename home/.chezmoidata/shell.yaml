@@ -1,0 +1,5 @@
+# shell.yaml
+
+shell:
+  zsh:
+    manager: zinit

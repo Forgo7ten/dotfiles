@@ -90,7 +90,6 @@
 data:
   system: {{ $system | quote }}
   use_secrets: {{ $useSecrets }}
-  zsh_scheme: "zinit"
   git:
 {{- if $useSecrets }}
     # git commit/tag sign (gpg or ssh)
