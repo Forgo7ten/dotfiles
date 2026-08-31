@@ -107,7 +107,17 @@ _ida() {
 {{- end }}
 
 function pkg(){
-    aapt dump badging $1 | grep "package: name"
+    if (( $# != 1 )); then
+        echo "Usage: pkg <apk-file>" >&2
+        return 2
+    fi
+
+    if ! command -v aapt >/dev/null 2>&1; then
+        echo "Error: aapt command not found. Please install Android build-tools first." >&2
+        return 127
+    fi
+
+    aapt dump badging "$1" | grep -F -- "package: name"
 }
 _pkg() {
     _files -g "*.apk"

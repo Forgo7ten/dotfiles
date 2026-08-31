@@ -4,21 +4,45 @@
 adb_exe="adb"
 alias open_lsposed="adb shell am start -n com.android.shell/.BugreportWarningActivity -c org.lsposed.manager.LAUNCH_MANAGER"
 
+_require_adb() {
+    if ! command -v "$adb_exe" >/dev/null 2>&1; then
+        echo "Error: adb command not found. Please install Android platform-tools first." >&2
+        return 127
+    fi
+}
+
+_require_adb_device() {
+    local selected_device="$1"
+
+    if ! "$adb_exe" -s "$selected_device" get-state >/dev/null 2>&1; then
+        echo "Error: adb device '$selected_device' is no longer available." >&2
+        return 1
+    fi
+}
+
 _get_all_adb_devices() {
     # 使用 awk 直接提取状态为 device 的序列号
-    $adb_exe devices | tr -d '\r' | awk 'NR>1 && $2=="device" {print $1}'
+    _require_adb || return 1
+    "$adb_exe" devices | tr -d '\r' | awk 'NR>1 && $2=="device" {print $1}'
 }
 # 内部函数：选择设备
 # 成功：echo 设备ID到 stdout, return 0
 # 失败：echo 错误信息到 stderr, return 1
 _select_adb_device() {
-    local devices=($(_get_all_adb_devices))
+    local device_output
+    device_output="$(_get_all_adb_devices)" || return 1
+
+    local -a devices
+    if [ -n "$device_output" ]; then
+        devices=("${(@f)device_output}")
+    fi
     local count=${#devices[@]}
 
     if [ ${count} -eq 0 ]; then
-        echo -e "Error: No adb devices found." >&2
+        echo -e "Error: No connected adb devices found." >&2
         return 1
     elif [ ${count} -eq 1 ]; then
+        _require_adb_device "${devices[1]}" || return 1
         # 只有一个设备时直接输出
         [ -n "$ZSH_VERSION" ] && echo "${devices[1]}" || echo "${devices[0]}" # 兼容处理：Zsh 取 [1]，Bash 取 [0]
         return 0
@@ -27,6 +51,7 @@ _select_adb_device() {
         local opt
         select opt in "${devices[@]}"; do
             if [ -n "$opt" ]; then
+                _require_adb_device "$opt" || continue
                 echo "$opt"
                 return 0
             else
@@ -52,7 +77,7 @@ aplapks(){
     echo -e "Fetching package list from $selected_device..."
 
     local pkg_data
-    pkg_data=$($adb_exe -s "$selected_device" shell "pm list packages -f" | tr -d '\r' | sed 's/^package://' | grep -v "/overlay/")
+    pkg_data=$("$adb_exe" -s "$selected_device" shell "pm list packages -f" | tr -d '\r' | sed 's/^package://' | grep -vF -- "/overlay/")
 
     local total=$(echo "$pkg_data" | grep -c "=")
     local current=0
@@ -71,7 +96,7 @@ aplapks(){
         # 采用对齐输出，看起来更整齐
         printf "[%3d/%3d] Pulling: %-50s " "$current" "$total" "$package_name"
         
-        if $adb_exe -s "$selected_device" pull "$package_path" "$output_dir/${package_name}.apk" &> /dev/null; then
+        if "$adb_exe" -s "$selected_device" pull "$package_path" "$output_dir/${package_name}.apk" &> /dev/null; then
             echo -e "\033[32m[OK]\033[0m"
         else
             echo -e "\033[31m[FAILED]\033[0m"
@@ -96,7 +121,7 @@ aplapk() {
     fi
 
     local pkg_data
-    pkg_data=$($adb_exe -s "$selected_device" shell "pm list packages -f" | tr -d '\r' | sed 's/^package://' | grep -i "$pkg_filter")
+    pkg_data=$("$adb_exe" -s "$selected_device" shell "pm list packages -f" | tr -d '\r' | sed 's/^package://' | grep -iF -- "$pkg_filter")
 
     if [ -z "$pkg_data" ]; then
         echo -e "No packages found matching '$pkg_filter'."
@@ -107,7 +132,7 @@ aplapk() {
         local package_name="${line##*=}"
         local package_path="${line%=*}"
         echo -n "Pulling $package_name... "
-        $adb_exe -s "$selected_device" pull "$package_path" "./${package_name}.apk" &> /dev/null && echo "OK" || echo "Failed"
+        "$adb_exe" -s "$selected_device" pull "$package_path" "./${package_name}.apk" &> /dev/null && echo "OK" || echo "Failed"
     done
     echo "Done."
 }
@@ -120,9 +145,9 @@ apuid(){
 
     local pkg="$1"
     if [ -z "$pkg" ]; then
-        $adb_exe -s "$selected_device" shell "pm list packages -U" | tr -d '\r'
+        "$adb_exe" -s "$selected_device" shell "pm list packages -U" | tr -d '\r'
     else
-        $adb_exe -s "$selected_device" shell "pm list packages -U" | tr -d '\r' | grep -i "$pkg"
+        "$adb_exe" -s "$selected_device" shell "pm list packages -U" | tr -d '\r' | grep -iF -- "$pkg"
     fi
 }
 alias apuids="apuid"
@@ -142,7 +167,7 @@ apinfo() {
 
     # 尝试查找匹配的包名
     local pkg_list
-    pkg_list=$($adb_exe -s "$selected_device" shell "pm list packages" | tr -d '\r' | sed 's/^package://' | grep -i "$pkg_filter")
+    pkg_list=$("$adb_exe" -s "$selected_device" shell "pm list packages" | tr -d '\r' | sed 's/^package://' | grep -iF -- "$pkg_filter")
 
     local count=$(echo "$pkg_list" | grep -c .)
 
@@ -158,7 +183,7 @@ apinfo() {
     # 只有一个匹配项时执行
     local target_pkg=$(echo "$pkg_list" | xargs)
     echo "Opening info for: $target_pkg"
-    $adb_exe -s "$selected_device" shell am start -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:"$target_pkg" > /dev/null
+    "$adb_exe" -s "$selected_device" shell am start -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:"$target_pkg" > /dev/null
 }
 mycmds describe "apinfo" "打开指定包名的设置 应用详情页"
 {{ end }} {{- /* if ne $system "server" */}}
