@@ -1,17 +1,23 @@
 # Local overrides (managed by chezmoi)
-# This file dispatches to specific local configurations based on OS and hostname.
+# Load order: common -> os -> role -> host
 
-# 1. Load common local configuration
+# 1. Common configuration
 [[ -r "$ZDOTDIR/local/common.zsh" ]] && source "$ZDOTDIR/local/common.zsh"
 
-# 2. Load OS-specific configuration
+# 2. OS-specific configuration
 {{- if eq .chezmoi.os "darwin" }}
 [[ -r "$ZDOTDIR/local/os/macos.zsh" ]] && source "$ZDOTDIR/local/os/macos.zsh"
 {{- else if eq .chezmoi.os "linux" }}
 [[ -r "$ZDOTDIR/local/os/linux.zsh" ]] && source "$ZDOTDIR/local/os/linux.zsh"
 {{- end }}
 
-# 3. Load Host-specific configuration
-{{- if eq .chezmoi.hostname "server" }}
-[[ -r "$ZDOTDIR/local/host/server.zsh" ]] && source "$ZDOTDIR/local/host/server.zsh"
+# 3. Role-specific configuration
+{{- if eq .system "client" }}
+[[ -r "$ZDOTDIR/local/role/client.zsh" ]] && source "$ZDOTDIR/local/role/client.zsh"
+{{- else if eq .system "server" }}
+[[ -r "$ZDOTDIR/local/role/server.zsh" ]] && source "$ZDOTDIR/local/role/server.zsh"
 {{- end }}
+
+# 4. Host-specific configuration
+[[ -r "$ZDOTDIR/local/host/{{ .chezmoi.hostname }}.zsh" ]] && \
+  source "$ZDOTDIR/local/host/{{ .chezmoi.hostname }}.zsh"

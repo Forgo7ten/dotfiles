@@ -20,7 +20,16 @@
 | `core/` | 插件无关的基础配置，在插件管理器前加载；包含 Zsh 选项、键位和 manager 初始化前必须可见的运行时。详见 [`core/README.md`](core/README.md)。 |
 | `managers/` | 插件管理器配置。`zshrc` 根据模板数据选择 `zinit`、`zimfw` 或禁用插件管理器；详见 [`managers/README.md`](managers/README.md)。 |
 | `features/` | 插件管理器之后加载的交互功能、别名、函数、补全和平台工具集成。数字前缀决定阶段顺序。 |
-| `local/` | 本机差异配置；由 `override.zsh.tmpl` 按操作系统和主机名加载 `common`、`os` 与 `host` 配置。 |
+| `local/` | 本机差异配置；由 `override.zsh.tmpl` 按 `common -> os -> role -> host` 顺序加载。 |
+
+### `local/` 分层
+
+| 层 | 判断来源 | 用途 |
+| --- | --- | --- |
+| `common.zsh` | 无 | 所有机器共享的本机配置。 |
+| `os/` | `.chezmoi.os` | 操作系统差异，目前支持 `darwin` 和 `linux`。 |
+| `role/` | `.system` | 机器角色差异，目前支持 `client` 和 `server`。 |
+| `host/` | `.chezmoi.hostname` | 某一台具体机器的差异，文件名对应真实 hostname；文件不存在时正常跳过。 |
 
 ## 加载顺序
 
