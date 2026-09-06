@@ -6,6 +6,9 @@
 	br = branch
 	ci = commit
 	st = status
+	aa = add --all
+	ap = add --patch
+	pf = push --force-with-lease --force-if-includes
 	lg = log --graph --color --pretty=format:'%C(bold white)%h%Creset -%C(auto)%d%Creset %s %C(brightblack)(%cr)%Creset %C(bold blue)<%an>%Creset' --abbrev-commit --all
 	lg2 = log --graph --decorate --pretty=oneline --abbrev-commit --all
 	lp = log --graph --color --pretty=format:'%C(bold white)%h%Creset -%C(auto)%d%Creset %s %C(brightblack)(%cr)%Creset %C(bold blue)<%an>%Creset' --abbrev-commit --all --stat
@@ -43,10 +46,20 @@
 [pull]
 	rebase = true
 
+[fetch]
+	prune = true
+
 [core]
 	quotepath = false
 
+[diff]
+	colorMoved = zebra
+
+[merge]
+	ff = only
+
 [rebase]
+	autoSquash = true
 	autoStash = true
 
 {{ if eq .chezmoi.os "linux" -}}
