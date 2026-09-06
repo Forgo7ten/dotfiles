@@ -24,6 +24,13 @@ function configure_system() {
 
     # 系统设置 - 电池 - 选项 - 使用电源适配器供电且显示器关闭时，防止自动进入睡眠 【开】
     sudo pmset -c sleep 0
+
+    # 系统设置 - 锁定屏幕 - 屏幕保护程序启动或显示器关闭后需要密码 【立即】
+    if ! /usr/sbin/sysadminctl -screenLock status 2>&1 | grep -q "delay is immediate"; then
+        printf "正在设置：屏保启动或显示器关闭后立即锁屏，需要验证当前用户密码。\n"
+        /usr/sbin/sysadminctl -screenLock immediate -password -
+    fi
+
 }
 
 function main() {
