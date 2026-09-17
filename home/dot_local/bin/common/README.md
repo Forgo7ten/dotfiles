@@ -1,5 +1,25 @@
 # bin
 
+## adc
+
+`adc` 是一个尽量薄的 adb 包装器（要求 Bash >= 5.0）：
+
+- 原生 adb 命令默认透传；仅对白名单内的 device-scoped 命令自动选择设备并补充 `-s SERIAL`
+- 设备选择优先级：`-s/-d/-e/-t` > `ANDROID_SERIAL` > 缓存 > 单设备自动选择 > 交互选择（fzf 或数字菜单）
+- 选择结果按 server 调用上下文缓存到 `~/.cache/adc/device`（`ADC_CACHE_DIR` 可覆盖），设备离线后自动重选
+
+自定义子命令：
+
+```bash
+adc device list / use / current / clear   # 设备与缓存管理
+adc apk pull <FILTER> / pullall <DIR>    # 拉取匹配/全部 APK
+adc pkg uid [FILTER] / info <FILTER>      # 查询 UID / 打开应用详情页
+adc lsposed                               # 打开 LSPosed Manager
+adc doctor                                # 环境诊断（Bash/adb/fzf/缓存）
+```
+
+其余参数原样交给 adb，例如 `adc shell`、`adc logcat`、`adc -s SERIAL install app.apk`。
+
 ## jadx-remote
 
 需要配置.env

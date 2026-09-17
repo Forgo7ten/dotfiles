@@ -1,0 +1,937 @@
+#!/usr/bin/env bash
+
+# adc：一个尽量薄的 adb 包装器。
+#
+# 设计目标：
+#   1. 原生 adb 命令默认透传，不复制 adb 的 server/host 解析规则。
+#   2. 仅对明确列入白名单的 device-scoped 命令自动选择设备并补充 `-s SERIAL`。
+#   3. 用户已经通过 -s/-d/-e/-t 或 ANDROID_SERIAL 指定目标时，完全尊重原生 adb 行为。
+#   4. 按“server 调用上下文 -> 设备”缓存选择结果；上下文只记录用户传入的
+#      -H/-P/-L 和相关环境变量，不推导最终 adb server endpoint。
+#   5. 保留少量常用 Android 辅助命令：device / apk / pkg / lsposed / doctor。
+#
+# 运行要求：Bash >= 5.0。正常调用不主动检查版本和依赖，需要时执行 `adc doctor`。
+
+set -uo pipefail
+
+ADB_BIN="${ADC_ADB:-adb}"
+CACHE_DIR="${ADC_CACHE_DIR:-$HOME/.cache/adc}"
+CACHE_FILE="$CACHE_DIR/device"
+
+# 参数解析结果。
+ADB_GLOBAL_ARGS=()      # 已识别的 adb 全局参数，供最终命令/自定义命令复用
+ADB_DISCOVERY_ARGS=()   # 查询 devices 时需要原样携带的非 target 全局参数
+CACHE_CONTEXT_PARTS=()  # 仅用于区分缓存上下文，不解释 adb 最终连接行为
+COMMAND=""
+COMMAND_ARGS=()
+ORIGINAL_ARGS=("$@")
+HAS_TARGET_SELECTOR=0
+UNKNOWN_GLOBAL_OPTION=0
+
+# 设备查询结果。
+DEVICE_SERIALS=()
+DEVICE_STATES=()
+DEVICE_DETAILS=()
+
+# 自定义命令执行期间复用，确保同一个命令中的多次 adb 调用使用同一目标。
+TARGET_ARGS=()
+CACHE_CONTEXT="default"
+
+usage() {
+  cat <<'EOF_USAGE'
+用法：
+  adc [adb 全局参数] <adb 命令> [参数...]
+  adc [adb 全局参数] <自定义命令> [参数...]
+
+自定义命令：
+  adc device list                 列出设备，并标记当前上下文缓存的设备
+  adc device use [SERIAL]         选择并缓存设备；多设备时优先使用 fzf
+  adc device current              输出当前显式选择或缓存的设备序列号
+  adc device clear                清除当前 server 调用上下文的设备缓存
+  adc device clear --all          清除全部 adc 设备缓存
+
+  adc apk pull <FILTER>           拉取包名/路径匹配 FILTER 的 APK 到当前目录
+  adc apk pullall <DIR>           拉取设备中已安装的 APK 到指定目录
+
+  adc pkg uid [FILTER]            列出应用 UID，可按关键字过滤
+  adc pkg info <FILTER>           打开唯一匹配应用的 Android 应用详情页
+
+  adc lsposed                     打开 LSPosed Manager
+  adc doctor                      检查 Bash、adb、fzf 和缓存状态
+  adc help                        只显示 adc 自定义帮助
+
+设备自动选择规则：
+  1. 已提供 -s/-d/-e/-t 时，adc 不参与设备选择，原样交给 adb。
+  2. 已设置 ANDROID_SERIAL 时，adc 不参与设备选择，原样交给 adb。
+  3. 只有已知的 device-scoped adb 命令才会自动选择设备。
+  4. 未知或未来新增的 adb 命令始终原样透传，不猜测其是否需要设备。
+  5. 缓存设备仍在线时直接复用；仅一台可用设备时自动选择并缓存。
+  6. 多设备且无有效缓存时：交互终端优先使用 fzf，否则使用数字菜单；
+     非交互环境直接报错，要求显式使用 -s 或先执行 adc device use。
+
+缓存：
+  默认文件：~/.cache/adc/device
+  可通过 ADC_CACHE_DIR 覆盖缓存目录。
+  缓存按“server 调用上下文 -> device”保存；adc 不计算最终 adb server endpoint，
+  也不模拟 adb 对 -H/-P/-L 与环境变量的优先级规则。
+
+说明：
+  - fzf 是可选依赖；未安装时使用数字菜单。
+  - adc 正常运行要求 Bash >= 5.0；需要诊断时执行 `adc doctor`。
+  - 原生 adb 帮助请直接执行 `adb help`。
+EOF_USAGE
+}
+
+fail() {
+  printf 'adc: %s\n' "$*" >&2
+  return 1
+}
+
+require_adb() {
+  command -v "$ADB_BIN" >/dev/null 2>&1 || {
+    fail "找不到 adb 命令：$ADB_BIN"
+    return 127
+  }
+}
+
+android_serial_is_set() {
+  [ "${ANDROID_SERIAL+x}" = x ]
+}
+
+add_cache_context() {
+  local source="$1" name="$2" value="$3" quoted=""
+  printf -v quoted '%q' "$value"
+  CACHE_CONTEXT_PARTS+=("${source}:${name}=${quoted}")
+}
+
+parse_global_args() {
+  local arg=""
+
+  while [ "$#" -gt 0 ]; do
+    arg="$1"
+    case "$arg" in
+      -d|-e)
+        HAS_TARGET_SELECTOR=1
+        ADB_GLOBAL_ARGS+=("$arg")
+        shift
+        ;;
+      -s|-t)
+        [ "$#" -ge 2 ] || {
+          UNKNOWN_GLOBAL_OPTION=1
+          return 0
+        }
+        HAS_TARGET_SELECTOR=1
+        ADB_GLOBAL_ARGS+=("$arg" "$2")
+        shift 2
+        ;;
+      -s[0-9]*|-t[0-9]*)
+        # 保留 adb 当前支持的紧凑数字形式，例如 -s123 / -t3。
+        HAS_TARGET_SELECTOR=1
+        ADB_GLOBAL_ARGS+=("$arg")
+        shift
+        ;;
+      -H|-P|-L)
+        [ "$#" -ge 2 ] || {
+          UNKNOWN_GLOBAL_OPTION=1
+          return 0
+        }
+        ADB_GLOBAL_ARGS+=("$arg" "$2")
+        ADB_DISCOVERY_ARGS+=("$arg" "$2")
+        add_cache_context argv "$arg" "$2"
+        shift 2
+        ;;
+      -H?*)
+        ADB_GLOBAL_ARGS+=("$arg")
+        ADB_DISCOVERY_ARGS+=("$arg")
+        add_cache_context argv -H "${arg#-H}"
+        shift
+        ;;
+      -P?*)
+        ADB_GLOBAL_ARGS+=("$arg")
+        ADB_DISCOVERY_ARGS+=("$arg")
+        add_cache_context argv -P "${arg#-P}"
+        shift
+        ;;
+      -a|--exit-on-write-error)
+        ADB_GLOBAL_ARGS+=("$arg")
+        ADB_DISCOVERY_ARGS+=("$arg")
+        shift
+        ;;
+      --one-device)
+        # --one-device 的语义交给 adb 自己处理；adc 不参与设备发现或缓存。
+        UNKNOWN_GLOBAL_OPTION=1
+        return 0
+        ;;
+      -h|--help)
+        COMMAND="help"
+        shift
+        COMMAND_ARGS=("$@")
+        return 0
+        ;;
+      -*)
+        # 未识别的全局参数不猜测语义，整个调用直接透传给 adb。
+        UNKNOWN_GLOBAL_OPTION=1
+        return 0
+        ;;
+      *)
+        COMMAND="$arg"
+        shift
+        COMMAND_ARGS=("$@")
+        return 0
+        ;;
+    esac
+  done
+}
+
+build_cache_context() {
+  local name="" value="" joined=""
+
+  # 环境变量只作为“不透明上下文”参与缓存分区；adc 不判断 adb 最终是否采用它们。
+  for name in ADB_SERVER_SOCKET ANDROID_ADB_SERVER_ADDRESS ANDROID_ADB_SERVER_PORT; do
+    if declare -p "$name" >/dev/null 2>&1; then
+      value="${!name}"
+      add_cache_context env "$name" "$value"
+    fi
+  done
+
+  if [ "${#CACHE_CONTEXT_PARTS[@]}" -gt 0 ]; then
+    local IFS='|'
+    joined="${CACHE_CONTEXT_PARTS[*]}"
+    CACHE_CONTEXT="$joined"
+  else
+    CACHE_CONTEXT="default"
+  fi
+}
+
+should_auto_select_command() {
+  local command="$1"
+  shift || true
+
+  # 严格白名单：未知/未来命令永远透传，不自动插入 -s。
+  case "$command" in
+    push|pull|sync|shell|emu|install|install-multiple|install-multi-package|uninstall|bugreport|jdwp|track-jdwp|track-app|logcat|lolcat|longcat|disable-verity|enable-verity|get-state|get-serialno|get-devpath|remount|reboot|reboot-bootloader|reboot-fastboot|sideload|rescue|root|unroot|usb|tcpip|features|transport-id|reverse|exec-in|exec-out|abb|backup|restore|ls)
+      return 0
+      ;;
+    forward)
+      # --list / --remove-all 是 server 范围，其余 forward 形式需要设备。
+      case "${1:-}" in
+        --list|--remove-all) return 1 ;;
+        *) return 0 ;;
+      esac
+      ;;
+    reconnect)
+      # 裸 reconnect / reconnect device 需要目标设备；offline 是 server 范围。
+      case "${1:-}" in
+        ""|device) return 0 ;;
+        *) return 1 ;;
+      esac
+      ;;
+  esac
+
+  # wait-for-* 保持 adb 原生行为，否则先选在线设备会破坏“等待”的语义。
+  return 1
+}
+
+is_selectable_state() {
+  case "$1" in
+    device|recovery|sideload|rescue|bootloader) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+load_devices() {
+  local output="" line="" serial="" state="" details=""
+
+  DEVICE_SERIALS=()
+  DEVICE_STATES=()
+  DEVICE_DETAILS=()
+
+  # 只把已识别的非 target adb 全局参数原样带给 devices；环境变量自然继承。
+  output="$("$ADB_BIN" "${ADB_DISCOVERY_ARGS[@]}" devices -l)" || {
+    fail "查询 adb 设备失败"
+    return 1
+  }
+
+  while IFS= read -r line; do
+    line="${line%$'\r'}"
+    [ -n "$line" ] || continue
+    case "$line" in
+      "List of devices attached"*|\**) continue ;;
+    esac
+
+    read -r serial state details <<< "$line"
+    [ -n "$serial" ] && [ -n "$state" ] || continue
+    DEVICE_SERIALS+=("$serial")
+    DEVICE_STATES+=("$state")
+    DEVICE_DETAILS+=("$details")
+  done <<< "$output"
+}
+
+find_device_index() {
+  local serial="$1" i=""
+  for i in "${!DEVICE_SERIALS[@]}"; do
+    [ "${DEVICE_SERIALS[$i]}" = "$serial" ] || continue
+    printf '%s\n' "$i"
+    return 0
+  done
+  return 1
+}
+
+device_is_selectable() {
+  local index=""
+  index="$(find_device_index "$1")" || return 1
+  is_selectable_state "${DEVICE_STATES[$index]}"
+}
+
+read_cached_device() {
+  local key="" serial=""
+  [ -r "$CACHE_FILE" ] || return 1
+
+  while IFS=$'\t' read -r key serial; do
+    [ "$key" = "$CACHE_CONTEXT" ] || continue
+    [ -n "$serial" ] || return 1
+    printf '%s\n' "$serial"
+    return 0
+  done < "$CACHE_FILE"
+  return 1
+}
+
+# 原子更新当前上下文缓存。参数为空表示删除当前上下文；非空表示写入设备 serial。
+update_cached_device() (
+  local new_serial="${1:-}" key="" serial="" tmp=""
+
+  [ -n "$new_serial" ] || [ -e "$CACHE_FILE" ] || exit 0
+
+  umask 077
+  mkdir -p "$CACHE_DIR" || {
+    fail "无法创建缓存目录：$CACHE_DIR"
+    exit 1
+  }
+
+  tmp="$CACHE_FILE.tmp.$$"
+  trap 'rm -f "$tmp"' EXIT HUP INT TERM
+  : > "$tmp" || {
+    fail "无法写入缓存文件：$CACHE_FILE"
+    exit 1
+  }
+
+  if [ -r "$CACHE_FILE" ]; then
+    while IFS=$'\t' read -r key serial; do
+      [ -n "$key" ] && [ -n "$serial" ] || continue
+      [ "$key" = "$CACHE_CONTEXT" ] && continue
+      printf '%s\t%s\n' "$key" "$serial" >> "$tmp" || exit 1
+    done < "$CACHE_FILE"
+  fi
+
+  [ -z "$new_serial" ] || printf '%s\t%s\n' "$CACHE_CONTEXT" "$new_serial" >> "$tmp" || exit 1
+
+  if [ -s "$tmp" ]; then
+    mv -f "$tmp" "$CACHE_FILE" || {
+      fail "无法更新缓存文件：$CACHE_FILE"
+      exit 1
+    }
+  else
+    rm -f "$CACHE_FILE" || {
+      fail "无法清除缓存文件：$CACHE_FILE"
+      exit 1
+    }
+  fi
+
+  trap - EXIT HUP INT TERM
+  rm -f "$tmp"
+)
+
+clear_all_cached_devices() {
+  rm -f "$CACHE_FILE" || {
+    fail "无法清除缓存文件：$CACHE_FILE"
+    return 1
+  }
+}
+
+format_device_line() {
+  local i="$1"
+  if [ -n "${DEVICE_DETAILS[$i]}" ]; then
+    printf '%s\t%s\t%s\n' "${DEVICE_SERIALS[$i]}" "${DEVICE_STATES[$i]}" "${DEVICE_DETAILS[$i]}"
+  else
+    printf '%s\t%s\n' "${DEVICE_SERIALS[$i]}" "${DEVICE_STATES[$i]}"
+  fi
+}
+
+select_loaded_device() {
+  local -a indices=()
+  local i="" count=0 selection="" answer="" n=0
+
+  for i in "${!DEVICE_SERIALS[@]}"; do
+    is_selectable_state "${DEVICE_STATES[$i]}" && indices+=("$i")
+  done
+  count="${#indices[@]}"
+
+  if [ "$count" -eq 0 ]; then
+    fail "没有可用的 adb 设备（offline/unauthorized 设备会被忽略）"
+    return 1
+  fi
+
+  if [ "$count" -eq 1 ]; then
+    printf '%s\n' "${DEVICE_SERIALS[${indices[0]}]}"
+    return 0
+  fi
+
+  if [ ! -t 0 ] || [ ! -t 2 ]; then
+    fail "检测到多个 adb 设备；请使用 -s SERIAL，或先执行 'adc device use SERIAL'"
+    return 1
+  fi
+
+  if command -v fzf >/dev/null 2>&1; then
+    selection="$({
+      for i in "${indices[@]}"; do
+        format_device_line "$i"
+      done
+    } | (
+      unset FZF_DEFAULT_OPTS FZF_DEFAULT_OPTS_FILE
+      fzf --prompt='选择 ADB 设备 > '
+    ))" || return $?
+
+    [ -n "$selection" ] || return 130
+    printf '%s\n' "${selection%%$'\t'*}"
+    return 0
+  fi
+
+  printf '请选择 adb 设备：\n' >&2
+  n=1
+  for i in "${indices[@]}"; do
+    printf '  %d) ' "$n" >&2
+    format_device_line "$i" >&2
+    n=$((n + 1))
+  done
+
+  while :; do
+    printf '设备编号：' >&2
+    IFS= read -r answer || return 1
+    case "$answer" in
+      ''|*[!0-9]*)
+        printf '无效选择。\n' >&2
+        continue
+        ;;
+    esac
+    n=$((10#$answer))
+    if [ "$n" -ge 1 ] && [ "$n" -le "$count" ]; then
+      i="${indices[$((n - 1))]}"
+      printf '%s\n' "${DEVICE_SERIALS[$i]}"
+      return 0
+    fi
+    printf '无效选择。\n' >&2
+  done
+}
+
+resolve_device() {
+  local cached="" selected=""
+
+  load_devices || return 1
+  cached="$(read_cached_device 2>/dev/null || true)"
+
+  if [ -n "$cached" ]; then
+    if device_is_selectable "$cached"; then
+      printf '%s\n' "$cached"
+      return 0
+    fi
+    update_cached_device "" || return 1
+  fi
+
+  selected="$(select_loaded_device)" || return $?
+  update_cached_device "$selected" || return 1
+  printf '%s\n' "$selected"
+}
+
+prepare_target() {
+  local serial=""
+
+  TARGET_ARGS=("${ADB_GLOBAL_ARGS[@]}")
+  if [ "$HAS_TARGET_SELECTOR" -eq 1 ] || android_serial_is_set; then
+    return 0
+  fi
+
+  serial="$(resolve_device)" || return $?
+  TARGET_ARGS+=("-s" "$serial")
+}
+
+target_adb() {
+  "$ADB_BIN" "${TARGET_ARGS[@]}" "$@"
+}
+
+resolve_explicit_serial() {
+  local serial=""
+  serial="$("$ADB_BIN" "${ADB_GLOBAL_ARGS[@]}" get-serialno)" || return $?
+  serial="${serial%$'\r'}"
+  [ -n "$serial" ] && [ "$serial" != "unknown" ] || {
+    fail "adb 没有解析出有效设备序列号"
+    return 1
+  }
+  printf '%s\n' "$serial"
+}
+
+command_device_list() {
+  local cached="" i="" marker=" "
+
+  load_devices || return 1
+  cached="$(read_cached_device 2>/dev/null || true)"
+  if [ -n "$cached" ] && ! device_is_selectable "$cached"; then
+    update_cached_device "" || return 1
+    cached=""
+  fi
+
+  printf '%-1s %-24s %-12s %s\n' "" "SERIAL" "STATE" "DETAILS"
+  for i in "${!DEVICE_SERIALS[@]}"; do
+    marker=" "
+    [ -n "$cached" ] && [ "${DEVICE_SERIALS[$i]}" = "$cached" ] && marker="*"
+    printf '%-1s %-24s %-12s %s\n' "$marker" "${DEVICE_SERIALS[$i]}" "${DEVICE_STATES[$i]}" "${DEVICE_DETAILS[$i]}"
+  done
+}
+
+command_device_use() {
+  local requested="${1:-}" selected=""
+
+  [ "$#" -le 1 ] || {
+    fail "用法：adc device use [SERIAL]"
+    return 2
+  }
+
+  if [ -z "$requested" ] && { [ "$HAS_TARGET_SELECTOR" -eq 1 ] || android_serial_is_set; }; then
+    selected="$(resolve_explicit_serial)" || return $?
+    load_devices || return 1
+    device_is_selectable "$selected" || {
+      fail "设备当前不可用：$selected"
+      return 1
+    }
+  else
+    load_devices || return 1
+    if [ -n "$requested" ]; then
+      device_is_selectable "$requested" || {
+        fail "设备当前不可用：$requested"
+        return 1
+      }
+      selected="$requested"
+    else
+      selected="$(select_loaded_device)" || return $?
+    fi
+  fi
+
+  update_cached_device "$selected" || return 1
+  printf '%s\n' "$selected"
+}
+
+command_device_current() {
+  local cached=""
+
+  [ "$#" -eq 0 ] || {
+    fail "用法：adc device current"
+    return 2
+  }
+
+  if [ "$HAS_TARGET_SELECTOR" -eq 1 ] || android_serial_is_set; then
+    resolve_explicit_serial
+    return $?
+  fi
+
+  cached="$(read_cached_device 2>/dev/null || true)"
+  [ -n "$cached" ] || {
+    fail "当前 server 调用上下文没有缓存设备"
+    return 1
+  }
+
+  load_devices || return 1
+  if ! device_is_selectable "$cached"; then
+    update_cached_device "" || return 1
+    fail "缓存设备已不可用：$cached"
+    return 1
+  fi
+
+  printf '%s\n' "$cached"
+}
+
+command_device_clear() {
+  case "${1:-}" in
+    "")
+      [ "$#" -eq 0 ] || {
+        fail "用法：adc device clear [--all]"
+        return 2
+      }
+      update_cached_device "" || return 1
+      printf '已清除当前上下文的设备缓存：%s\n' "$CACHE_CONTEXT"
+      ;;
+    --all)
+      [ "$#" -eq 1 ] || {
+        fail "用法：adc device clear [--all]"
+        return 2
+      }
+      clear_all_cached_devices || return 1
+      printf '已清除全部设备缓存：%s\n' "$CACHE_FILE"
+      ;;
+    *)
+      fail "用法：adc device clear [--all]"
+      return 2
+      ;;
+  esac
+}
+
+command_device_help() {
+  cat <<'EOF_DEVICE'
+用法：
+  adc device list                 列出设备，并标记当前缓存设备
+  adc device use [SERIAL]         选择并缓存设备
+  adc device current              输出当前显式选择或缓存设备
+  adc device clear                清除当前上下文缓存
+  adc device clear --all          清除全部设备缓存
+EOF_DEVICE
+}
+
+command_device() {
+  local subcommand="${1:-}"
+  [ "$#" -gt 0 ] && shift
+
+  case "$subcommand" in
+    list)
+      [ "$#" -eq 0 ] || { fail "用法：adc device list"; return 2; }
+      command_device_list
+      ;;
+    use) command_device_use "$@" ;;
+    current) command_device_current "$@" ;;
+    clear) command_device_clear "$@" ;;
+    ''|-h|--help|help) command_device_help ;;
+    *) fail "未知 device 子命令：$subcommand"; return 2 ;;
+  esac
+}
+
+command_apk_pull_all() {
+  local output_dir="${1:-}" resolved_output_dir="" raw="" pkg_data="" line=""
+  local package_name="" package_path="" total=0 current=0 failures=0
+
+  [ "$#" -eq 1 ] && [ -n "$output_dir" ] || {
+    fail "用法：adc apk pullall <DIR>"
+    return 2
+  }
+
+  while [ "$output_dir" != "/" ] && [ "${output_dir%/}" != "$output_dir" ]; do
+    output_dir="${output_dir%/}"
+  done
+  [ "$output_dir" != "/" ] || {
+    fail "拒绝把全部 APK 拉取到文件系统根目录 /"
+    return 2
+  }
+
+  mkdir -p "$output_dir" || {
+    fail "无法创建输出目录：$output_dir"
+    return 1
+  }
+
+  resolved_output_dir="$(cd "$output_dir" 2>/dev/null && pwd -P)" || {
+    fail "无法解析输出目录：$output_dir"
+    return 1
+  }
+  [ "$resolved_output_dir" != "/" ] || {
+    fail "拒绝把全部 APK 拉取到文件系统根目录 /"
+    return 2
+  }
+
+  prepare_target || return $?
+  raw="$(target_adb shell pm list packages -f)" || return $?
+  pkg_data="$(printf '%s\n' "$raw" | tr -d '\r' | sed 's/^package://' | grep -vF -- '/overlay/' || true)"
+  [ -n "$pkg_data" ] || {
+    fail "设备没有返回已安装 APK 路径"
+    return 1
+  }
+
+  total="$(printf '%s\n' "$pkg_data" | grep -c '=' || true)"
+  printf '共 %s 个包，开始拉取到：%s\n' "$total" "$output_dir"
+
+  while IFS= read -r line; do
+    case "$line" in *=*) ;; *) continue ;; esac
+    package_name="${line##*=}"
+    package_path="${line%=*}"
+    current=$((current + 1))
+
+    printf '[%3d/%3d] %-50s ' "$current" "$total" "$package_name"
+    if target_adb pull "$package_path" "$output_dir/${package_name}.apk" >/dev/null 2>&1; then
+      printf '[OK]\n'
+    else
+      printf '[FAILED]\n'
+      failures=$((failures + 1))
+    fi
+  done <<< "$pkg_data"
+
+  [ "$failures" -eq 0 ] || return 1
+}
+
+command_apk_pull() {
+  local filter="${1:-}" raw="" pkg_data="" line=""
+  local package_name="" package_path="" failures=0
+
+  [ "$#" -eq 1 ] && [ -n "$filter" ] || {
+    fail "用法：adc apk pull <FILTER>"
+    return 2
+  }
+
+  prepare_target || return $?
+  raw="$(target_adb shell pm list packages -f)" || return $?
+  pkg_data="$(printf '%s\n' "$raw" | tr -d '\r' | sed 's/^package://' | grep -iF -- "$filter" || true)"
+  [ -n "$pkg_data" ] || {
+    fail "没有找到匹配的应用：$filter"
+    return 1
+  }
+
+  while IFS= read -r line; do
+    case "$line" in *=*) ;; *) continue ;; esac
+    package_name="${line##*=}"
+    package_path="${line%=*}"
+
+    printf '拉取 %s... ' "$package_name"
+    if target_adb pull "$package_path" "./${package_name}.apk" >/dev/null 2>&1; then
+      printf 'OK\n'
+    else
+      printf 'FAILED\n'
+      failures=$((failures + 1))
+    fi
+  done <<< "$pkg_data"
+
+  [ "$failures" -eq 0 ] || return 1
+}
+
+command_apk() {
+  local subcommand="${1:-}"
+  [ "$#" -gt 0 ] && shift
+
+  case "$subcommand" in
+    pull) command_apk_pull "$@" ;;
+    pullall) command_apk_pull_all "$@" ;;
+    ''|-h|--help|help)
+      cat <<'EOF_APK'
+用法：
+  adc apk pull <FILTER>           拉取匹配的 APK 到当前目录
+  adc apk pullall <DIR>           拉取全部已安装 APK 到指定目录
+EOF_APK
+      ;;
+    *) fail "未知 apk 子命令：$subcommand"; return 2 ;;
+  esac
+}
+
+command_pkg_uid() {
+  local filter="${1:-}"
+  [ "$#" -le 1 ] || {
+    fail "用法：adc pkg uid [FILTER]"
+    return 2
+  }
+
+  prepare_target || return $?
+  if [ -n "$filter" ]; then
+    target_adb shell pm list packages -U | tr -d '\r' | grep -iF -- "$filter"
+  else
+    target_adb shell pm list packages -U | tr -d '\r'
+  fi
+}
+
+command_pkg_info() {
+  local filter="${1:-}" raw="" pkg_list="" count=0 target_pkg=""
+
+  [ "$#" -eq 1 ] && [ -n "$filter" ] || {
+    fail "用法：adc pkg info <FILTER>"
+    return 2
+  }
+
+  prepare_target || return $?
+  raw="$(target_adb shell pm list packages)" || return $?
+  pkg_list="$(printf '%s\n' "$raw" | tr -d '\r' | sed 's/^package://' | grep -iF -- "$filter" || true)"
+  count="$(printf '%s\n' "$pkg_list" | grep -c . || true)"
+
+  if [ "$count" -eq 0 ]; then
+    fail "没有找到匹配的应用：$filter"
+    return 1
+  fi
+  if [ "$count" -gt 1 ]; then
+    printf '匹配到多个应用，请提供更精确的关键字：\n%s\n' "$pkg_list" >&2
+    return 1
+  fi
+
+  target_pkg="$(printf '%s\n' "$pkg_list" | head -n 1)"
+  printf '正在打开应用详情：%s\n' "$target_pkg"
+  target_adb shell am start \
+    -a android.settings.APPLICATION_DETAILS_SETTINGS \
+    -d "package:$target_pkg" >/dev/null
+}
+
+command_pkg() {
+  local subcommand="${1:-}"
+  [ "$#" -gt 0 ] && shift
+
+  case "$subcommand" in
+    uid) command_pkg_uid "$@" ;;
+    info) command_pkg_info "$@" ;;
+    ''|-h|--help|help)
+      cat <<'EOF_PKG'
+用法：
+  adc pkg uid [FILTER]            列出应用 UID，可按关键字过滤
+  adc pkg info <FILTER>           打开唯一匹配应用的应用详情页
+EOF_PKG
+      ;;
+    *) fail "未知 pkg 子命令：$subcommand"; return 2 ;;
+  esac
+}
+
+command_lsposed() {
+  [ "$#" -eq 0 ] || {
+    fail "用法：adc lsposed"
+    return 2
+  }
+
+  prepare_target || return $?
+  target_adb shell am start \
+    -n com.android.shell/.BugreportWarningActivity \
+    -c org.lsposed.manager.LAUNCH_MANAGER >/dev/null
+}
+
+doctor_status() {
+  local level="$1" label="$2"
+  shift 2
+  printf '[%-4s] %-10s %s\n' "$level" "$label" "$*"
+}
+
+command_doctor() {
+  local failures=0 warnings=0
+  local bash_path="${BASH:-unknown}" path_bash=""
+  local adb_path="" adb_version="" fzf_path="" fzf_version="" cached=""
+
+  if [ "${BASH_VERSINFO[0]:-0}" -ge 5 ]; then
+    doctor_status OK Bash "${BASH_VERSION:-unknown} ($bash_path)"
+  else
+    doctor_status FAIL Bash "${BASH_VERSION:-unknown} ($bash_path)；adc 要求 Bash >= 5.0"
+    failures=$((failures + 1))
+  fi
+
+  path_bash="$(command -v bash 2>/dev/null || true)"
+  if [ -n "$path_bash" ] && [ "$bash_path" != "$path_bash" ]; then
+    doctor_status WARN PATH "当前运行 $bash_path，但 PATH 中 bash 为 $path_bash"
+    warnings=$((warnings + 1))
+  fi
+
+  adb_path="$(command -v "$ADB_BIN" 2>/dev/null || true)"
+  if [ -n "$adb_path" ]; then
+    adb_version="$("$ADB_BIN" version 2>/dev/null | head -n 1 || true)"
+    doctor_status OK adb "$adb_path${adb_version:+；$adb_version}"
+  else
+    doctor_status FAIL adb "未找到：$ADB_BIN"
+    failures=$((failures + 1))
+  fi
+
+  fzf_path="$(command -v fzf 2>/dev/null || true)"
+  if [ -n "$fzf_path" ]; then
+    fzf_version="$(fzf --version 2>/dev/null | head -n 1 || true)"
+    doctor_status OK fzf "$fzf_path${fzf_version:+；$fzf_version}"
+  else
+    doctor_status WARN fzf "未安装；多设备时将使用数字菜单"
+    warnings=$((warnings + 1))
+  fi
+
+  if [ -e "$CACHE_FILE" ]; then
+    if [ -f "$CACHE_FILE" ] && [ -r "$CACHE_FILE" ] && [ -w "$CACHE_FILE" ]; then
+      doctor_status OK cache "$CACHE_FILE"
+    else
+      doctor_status FAIL cache "$CACHE_FILE 必须是可读写的普通文件"
+      failures=$((failures + 1))
+    fi
+  elif [ -d "$CACHE_DIR" ]; then
+    if [ -w "$CACHE_DIR" ]; then
+      doctor_status OK cache "$CACHE_FILE（尚未创建；缓存目录可写）"
+    else
+      doctor_status FAIL cache "$CACHE_DIR 不可写"
+      failures=$((failures + 1))
+    fi
+  else
+    doctor_status INFO cache "$CACHE_FILE（尚未创建）"
+  fi
+
+  if [ "${BASH_VERSINFO[0]:-0}" -ge 5 ]; then
+    doctor_status INFO context "$CACHE_CONTEXT"
+    cached="$(read_cached_device 2>/dev/null || true)"
+    if [ -n "$cached" ]; then
+      if load_devices >/dev/null 2>&1 && device_is_selectable "$cached"; then
+        doctor_status OK device "$cached（当前上下文缓存）"
+      else
+        doctor_status WARN device "$cached 已不在线"
+        warnings=$((warnings + 1))
+      fi
+    else
+      doctor_status INFO device "当前上下文没有缓存设备"
+    fi
+  else
+    doctor_status INFO context "Bash 版本不足，未解析缓存上下文"
+  fi
+
+  if [ "$failures" -gt 0 ]; then
+    printf '\n%d 项必需检查失败，%d 项警告。\n' "$failures" "$warnings" >&2
+    return 1
+  fi
+  printf '\n所有必需检查均通过，%d 项警告。\n' "$warnings"
+}
+
+main() {
+  local serial=""
+
+  if [ "$#" -eq 0 ]; then
+    usage
+    return 0
+  fi
+
+  parse_global_args "$@"
+
+  if [ "$UNKNOWN_GLOBAL_OPTION" -eq 1 ]; then
+    require_adb || return $?
+    exec "$ADB_BIN" "${ORIGINAL_ARGS[@]}"
+  fi
+
+  if [ -z "$COMMAND" ]; then
+    usage
+    return 0
+  fi
+
+  # help 不需要 adb；doctor 只在 Bash >= 5 时构建缓存上下文。
+  case "$COMMAND" in
+    help)
+      usage
+      return 0
+      ;;
+    doctor)
+      [ "${#COMMAND_ARGS[@]}" -eq 0 ] || {
+        fail "用法：adc doctor"
+        return 2
+      }
+      if [ "${BASH_VERSINFO[0]:-0}" -ge 5 ]; then
+        build_cache_context
+      fi
+      command_doctor
+      return $?
+      ;;
+  esac
+
+  build_cache_context
+  require_adb || return $?
+
+  case "$COMMAND" in
+    device) command_device "${COMMAND_ARGS[@]}"; return $? ;;
+    apk) command_apk "${COMMAND_ARGS[@]}"; return $? ;;
+    pkg) command_pkg "${COMMAND_ARGS[@]}"; return $? ;;
+    lsposed) command_lsposed "${COMMAND_ARGS[@]}"; return $? ;;
+  esac
+
+  # 用户已经明确选择目标时，完全不参与设备选择与缓存。
+  if [ "$HAS_TARGET_SELECTOR" -eq 1 ] || android_serial_is_set; then
+    exec "$ADB_BIN" "${ORIGINAL_ARGS[@]}"
+  fi
+
+  # 未知、host/global 或未列入白名单的命令完全透传。
+  if ! should_auto_select_command "$COMMAND" "${COMMAND_ARGS[@]}"; then
+    exec "$ADB_BIN" "${ORIGINAL_ARGS[@]}"
+  fi
+
+  serial="$(resolve_device)" || return $?
+  exec "$ADB_BIN" "${ADB_GLOBAL_ARGS[@]}" -s "$serial" "$COMMAND" "${COMMAND_ARGS[@]}"
+}
+
+main "$@"
