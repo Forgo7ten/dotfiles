@@ -14,6 +14,7 @@ fi
 
 # 定义 macOS 对应的软件包列表
 readonly PACKAGES=(
+    bash             # adc 等脚本使用的新版 Bash
     usbutils         # USB 设备信息查看工具
     wget             # 文件下载
     jq               # JSON 查询、过滤和转换工具
