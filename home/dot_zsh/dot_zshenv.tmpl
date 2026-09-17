@@ -5,3 +5,9 @@
 ZDOTDIR="$HOME/.zsh"
 
 [[ -r "$ZDOTDIR/env.zsh" ]] && source "$ZDOTDIR/env.zsh"
+
+# 加载用户本地配置
+if [[ -f "$HOME/.zshenv.local" && -r "$HOME/.zshenv.local" ]]; then
+  source "$HOME/.zshenv.local"
+fi
+
