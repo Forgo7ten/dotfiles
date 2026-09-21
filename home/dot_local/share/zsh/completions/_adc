@@ -1,0 +1,315 @@
+#compdef adc
+
+# adc 自定义命令补全。
+#
+# 行为约束：
+#   1. adc 自定义子命令由本文件补全；原生 adb 命令继续委托 Zsh 自带的 _adb，
+#      不在这里复制 adb 命令表。
+#   2. 补全阶段不得执行 adc，避免按 Tab 时触发设备选择、fzf 或修改设备缓存。
+#   3. 只有 `device use` / `-s` 的 SERIAL 补全会无交互执行 `adb devices -l`；
+#      查询时复用 adc 命令行中的 -H/-P/-L 等 server 参数。
+
+(( $+functions[_adc_delegate_adb] )) ||
+_adc_delegate_adb() {
+  (( $+functions[_adb] )) || autoload -Uz _adb 2>/dev/null || return 1
+
+  local words=("$words[@]") CURRENT=$CURRENT service=adb
+  words[1]="adb"
+  _adb
+}
+
+(( $+functions[_adc_device_serial] )) ||
+_adc_device_serial() {
+  local adb_bin="${ADC_ADB:-adb}"
+  local output="" line="" serial="" state="" details="" arg="" escaped_serial=""
+  local i=2
+  local -a discovery_args devices
+
+  command -v "$adb_bin" >/dev/null 2>&1 || return 1
+
+  # _adc_source_words 由当前 _adc 调用保存；Zsh 函数使用动态作用域，
+  # 因此这里能读取进入 custom command 前的完整命令行。
+  while (( i <= ${#_adc_source_words[@]} )); do
+    arg="${_adc_source_words[i]}"
+
+    case "$arg" in
+      -H|-P|-L)
+        (( i + 1 <= ${#_adc_source_words[@]} )) || break
+        discovery_args+=("$arg" "${_adc_source_words[i + 1]}")
+        (( i += 2 ))
+        ;;
+      -H?*|-P?*|-a|--exit-on-write-error)
+        discovery_args+=("$arg")
+        (( i++ ))
+        ;;
+      -s|-t)
+        (( i + 1 <= ${#_adc_source_words[@]} )) || break
+        (( i += 2 ))
+        ;;
+      -d|-e|-s[0-9]*|-t[0-9]*)
+        (( i++ ))
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+
+  output="$("$adb_bin" "${discovery_args[@]}" devices -l 2>/dev/null)" || return 1
+
+  while IFS= read -r line; do
+    line="${line%$'\r'}"
+    [[ -n "$line" ]] || continue
+
+    case "$line" in
+      "List of devices attached"*|\**)
+        continue
+        ;;
+    esac
+
+    read -r serial state details <<< "$line"
+    [[ -n "$serial" && -n "$state" ]] || continue
+
+    case "$state" in
+      device|recovery|sideload|rescue|bootloader)
+        # _describe 用冒号分隔候选值和描述；TCP/IP serial 中的冒号需要转义。
+        escaped_serial="${serial//:/\\:}"
+        devices+=("${escaped_serial}:${state}")
+        ;;
+    esac
+  done <<< "$output"
+
+  (( ${#devices[@]} > 0 )) || return 1
+  _describe -t adc-devices '可用 adb 设备' devices
+}
+
+local command_pos=0 command="" passthrough=0
+local i=2 arg=""
+local -a _adc_source_words
+_adc_source_words=("$words[@]")
+
+# 定位 adc 命令。边界与 executable_adc 的全局参数解析保持一致：
+# 已知全局参数之后才可能出现 adc 自定义命令；未知全局参数按 adb 透传处理。
+while (( i <= CURRENT )); do
+  arg="${words[i]}"
+
+  case "$arg" in
+    -d|-e|-a|--exit-on-write-error)
+      (( i++ ))
+      ;;
+    -s|-t|-H|-P|-L)
+      if (( i == CURRENT )); then
+        break
+      fi
+      (( i += 2 ))
+      ;;
+    -s[0-9]*|-t[0-9]*|-H?*|-P?*)
+      (( i++ ))
+      ;;
+    -h|--help)
+      if (( i < CURRENT )); then
+        command_pos=$i
+        command="help"
+      fi
+      break
+      ;;
+    --one-device|-*)
+      passthrough=1
+      break
+      ;;
+    "")
+      break
+      ;;
+    *)
+      command_pos=$i
+      command="$arg"
+      break
+      ;;
+  esac
+done
+
+if (( passthrough )); then
+  _adc_delegate_adb
+  return
+fi
+
+# 尚未输入命令，或当前 token 正在输入命令名。
+if (( command_pos == 0 || command_pos == CURRENT )); then
+  local curcontext="$curcontext" state line
+  local -A opt_args
+  local ret=1
+  local -a commands
+
+  commands=(
+    'device:设备与设备缓存管理'
+    'cache:控制多设备自动缓存'
+    'apk:APK 拉取辅助命令'
+    'pkg:Android 包信息辅助命令'
+    'lsposed:打开 LSPosed Manager'
+    'doctor:检查 Bash、adb、fzf 和缓存状态'
+    'help:显示 adc 自定义帮助'
+  )
+
+  _arguments -C \
+    '(-e -s -t)-d[使用唯一的 USB 设备]' \
+    '(-d -s -t)-e[使用唯一的 TCP/IP 模拟器]' \
+    '(-d -e -t)-s[指定设备序列号]:设备序列号:_adc_device_serial' \
+    '(-d -e -s)-t[指定 transport id]:transport id:' \
+    '-H+[指定 adb server 主机]:主机:_hosts' \
+    '-P+[指定 adb server 端口]:端口:' \
+    '-L[指定 adb server socket]:socket:' \
+    '-a[让 adb server 监听所有网络接口]' \
+    '--exit-on-write-error[stdout 关闭时退出]' \
+    '-h[显示 adc 自定义帮助]' \
+    '--help[显示 adc 自定义帮助]' \
+    '1:命令:->command' \
+    '*::参数:->argument' && ret=0
+
+  case "$state" in
+    command)
+      _describe -t adc-commands 'adc 自定义命令' commands && ret=0
+      _adc_delegate_adb && ret=0
+      ;;
+    argument)
+      _adc_delegate_adb && ret=0
+      ;;
+  esac
+
+  return ret
+fi
+
+# 非 adc 自定义命令直接交给系统 adb completion。
+case "$command" in
+  device|cache|apk|pkg|lsposed|doctor|help)
+    ;;
+  *)
+    _adc_delegate_adb
+    return
+    ;;
+esac
+
+# 进入 custom command 后移除前面的 adc 全局参数，使 words[1] 变成自定义命令。
+shift $(( command_pos - 1 )) words
+(( CURRENT -= command_pos - 1 ))
+
+case "$words[1]" in
+  device)
+    local -a subcommands
+    subcommands=(
+      'list:列出设备并标记当前上下文保存的缓存设备'
+      'use:选择并保存设备'
+      'current:输出当前显式目标或保存的缓存设备'
+      'clear:清除设备缓存'
+      'help:显示 device 帮助'
+    )
+
+    if (( CURRENT == 2 )); then
+      _describe -t adc-device-commands 'device 子命令' subcommands
+      return
+    fi
+
+    case "${words[2]}" in
+      use)
+        if (( CURRENT == 3 )); then
+          _adc_device_serial
+        else
+          _message -r '没有更多参数'
+        fi
+        ;;
+      clear)
+        if (( CURRENT == 3 )); then
+          _values 'device clear 选项' \
+            '--all[清除全部 server context 的设备缓存]'
+        else
+          _message -r '没有更多参数'
+        fi
+        ;;
+      list|current|help)
+        _message -r '没有更多参数'
+        ;;
+    esac
+    ;;
+
+  cache)
+    local -a subcommands
+    subcommands=(
+      'on:启用多设备自动缓存'
+      'off:关闭多设备自动缓存'
+      'status:输出当前缓存模式'
+      'help:显示 cache 帮助'
+    )
+
+    if (( CURRENT == 2 )); then
+      _describe -t adc-cache-commands 'cache 子命令' subcommands
+    else
+      _message -r '没有更多参数'
+    fi
+    ;;
+
+  apk)
+    local -a subcommands
+    subcommands=(
+      'pull:拉取匹配的 APK 到当前目录'
+      'pullall:拉取全部已安装 APK 到指定目录'
+      'help:显示 apk 帮助'
+    )
+
+    if (( CURRENT == 2 )); then
+      _describe -t adc-apk-commands 'apk 子命令' subcommands
+      return
+    fi
+
+    case "${words[2]}" in
+      pull)
+        if (( CURRENT == 3 )); then
+          # 不查询远端 package，避免补全阶段产生设备选择或缓存副作用。
+          _message -r '包名或 APK 路径过滤关键字'
+        else
+          _message -r '没有更多参数'
+        fi
+        ;;
+      pullall)
+        if (( CURRENT == 3 )); then
+          _directories
+        else
+          _message -r '没有更多参数'
+        fi
+        ;;
+      help)
+        _message -r '没有更多参数'
+        ;;
+    esac
+    ;;
+
+  pkg)
+    local -a subcommands
+    subcommands=(
+      'uid:列出应用 UID'
+      'info:打开唯一匹配应用的详情页'
+      'help:显示 pkg 帮助'
+    )
+
+    if (( CURRENT == 2 )); then
+      _describe -t adc-pkg-commands 'pkg 子命令' subcommands
+      return
+    fi
+
+    case "${words[2]}" in
+      uid|info)
+        if (( CURRENT == 3 )); then
+          # FILTER 不动态查询 package，保持 Tab 补全无远端副作用。
+          _message -r '应用包名过滤关键字'
+        else
+          _message -r '没有更多参数'
+        fi
+        ;;
+      help)
+        _message -r '没有更多参数'
+        ;;
+    esac
+    ;;
+
+  lsposed|doctor|help)
+    _message -r '没有更多参数'
+    ;;
+esac

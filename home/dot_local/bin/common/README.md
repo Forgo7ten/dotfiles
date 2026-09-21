@@ -5,18 +5,23 @@
 `adc` 是一个尽量薄的 adb 包装器（要求 Bash >= 5.0）：
 
 - 原生 adb 命令默认透传；仅对白名单内的 device-scoped 命令自动选择设备并补充 `-s SERIAL`
-- 设备选择优先级：`-s/-d/-e/-t` > `ANDROID_SERIAL` > 缓存 > 单设备自动选择 > 交互选择（fzf 或数字菜单）
-- 选择结果按 server 调用上下文缓存到 `~/.cache/adc/device`（`ADC_CACHE_DIR` 可覆盖），设备离线后自动重选
+- 显式 `-s/-d/-e/-t` 或 `ANDROID_SERIAL` 始终优先；没有显式目标时先统计 selectable devices：0 台报错，1 台直接使用，多台才进入缓存/交互选择
+- 多设备选择缓存默认关闭；`adc cache on/off/status` 用 `~/.cache/adc/enable` 控制，关闭不会删除 `~/.cache/adc/device`
+- 设备缓存按 server 调用上下文保存；已确认失效的缓存会被淘汰并重新选择；`ADC_CACHE_DIR` 可覆盖整个缓存目录
+- 多设备交互优先使用忽略全局配置的 fzf 小窗口；未安装 fzf 时回退到数字菜单
 
 自定义子命令：
 
 ```bash
-adc device list / use / current / clear   # 设备与缓存管理
-adc apk pull <FILTER> / pullall <DIR>    # 拉取匹配/全部 APK
+adc cache on / off / status              # 控制多设备选择缓存（默认 off）
+adc device list / use / current / clear  # 显式设备缓存管理
+adc apk pull <FILTER> / pullall <DIR>     # 拉取匹配/全部 APK
 adc pkg uid [FILTER] / info <FILTER>      # 查询 UID / 打开应用详情页
 adc lsposed                               # 打开 LSPosed Manager
 adc doctor                                # 环境诊断（Bash/adb/fzf/缓存）
 ```
+
+`device use/current/list/clear` 不受 cache on/off 禁用；`cache off` 仅停止普通多设备命令自动读取/更新缓存。`apk pull` / `pullall` 的结果状态在交互终端使用绿色 `[OK]` / 红色 `[FAILED]`，重定向或设置 `NO_COLOR` 时不输出 ANSI 颜色。
 
 其余参数原样交给 adb，例如 `adc shell`、`adc logcat`、`adc -s SERIAL install app.apk`。
 
