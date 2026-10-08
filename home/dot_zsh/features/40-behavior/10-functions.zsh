@@ -47,32 +47,42 @@ alias unproxy='proxy_off'
 mycmds describe "proxy_off/unproxy" "清除代理"
 
 ## 封装nohup
-nohu() {
+nohu () {
     if [[ $# -eq 0 ]]; then
-        echo "Usage: mynohup <command> [args...]"
+        echo "Usage: nohu <command> [args...]"
         return 1
     fi
 
     local temp_dir="${TMPDIR:-/tmp}"
     temp_dir="${temp_dir%/}/"
-    
-    local cmd_name=$(basename "$1")
+
+    local cmd="$1"
+    local cmd_name="$1"
+    shift
+
+    # 如果第一个参数是 alias，则展开
+    if [[ -n "${aliases[$cmd]}" ]]; then
+        cmd="${aliases[$cmd]}"
+    fi
+
     local current_timestamp=$(date +%Y%m%d_%H%M%S)
     local nohup_log="${temp_dir}nohup_${cmd_name}_${current_timestamp}.log"
-    
-    nohup "$@" > "$nohup_log" 2>&1 &
-    
+
+    # 后续参数使用 zsh 的 (q) 安全转义
+    local args="${(j: :)${(q)@}}"
+
+    eval "nohup $cmd $args > ${(q)nohup_log} 2>&1 &"
     local pid=$!
-    
+
     echo "------------------------------------------"
     echo "Process started in background."
-    echo "Command:  $*"
+    echo "Command:  $cmd $*"
     echo "PID:      $pid"
     echo "Log file: $nohup_log"
     echo "------------------------------------------"
-    
+
     sleep 0.5
-    if ! kill -0 $pid 2>/dev/null; then
+    if ! kill -0 "$pid" 2>/dev/null; then
         echo "Warning: Process $pid seems to have exited immediately. Check the log."
     fi
 }
