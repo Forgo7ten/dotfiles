@@ -1,9 +1,13 @@
-# Core: Aliases
-# General aliases and OS-specific shortcuts
+# Zsh Aliases & Shortcuts
+# Common aliases and tool-specific helpers
 
 # -----------------------------------------------------------------------------
 # General
 # -----------------------------------------------------------------------------
+
+# Expand aliases after sudo
+alias sudo='sudo '
+
 
 if (( $+commands[eza] )); then
   unalias lf lg 2>/dev/null

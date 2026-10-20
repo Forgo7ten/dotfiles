@@ -6,21 +6,6 @@
 # - 每次 zsh 调用都会由 env.zsh 加载
 # - 系统登录初始化完成后会由 .zprofile 再次加载
 
-# 通用 PATH 组装块
-() {
-  typeset -gU PATH path
-
-  path=(
-    ${HOME}/.local/bin(N-/)
-    ${HOME}/.local/bin/common(N-/)
-{{- if eq .chezmoi.os "darwin" }}
-    ${HOME}/.local/bin/macos(N-/)
-{{- end }}
-    ${HOME}/.local/share/mise/shims
-    $path
-    /usr/local/{,s}bin(N-/)
-  )
-}
 
 {{- if ne .system "server" }}
 # Android PATH 注册块：只收集实际存在的 SDK、NDK 与 Build Tools 目录。
@@ -59,3 +44,21 @@
   )
 }
 {{- end }}
+
+
+# 通用 PATH 组装块
+() {
+  typeset -gU PATH path
+
+  path=(
+    ${HOME}/.uv/venv/system/bin(N-/)  # global python by uv.
+    ${HOME}/.local/bin(N-/)
+    ${HOME}/.local/bin/common(N-/)
+{{- if eq .chezmoi.os "darwin" }}
+    ${HOME}/.local/bin/macos(N-/)
+{{- end }}
+    ${HOME}/.local/share/mise/shims
+    $path
+    /usr/local/{,s}bin(N-/)
+  )
+}
