@@ -37,24 +37,6 @@ adx -s SERIAL shell              # 显式指定目标时不弹出选择
 adx restart-server               # 不需要选择设备
 ```
 
-## jadx-remote
-
-需要配置.env
-
-```bash
-export JADX_REMOTE_HOST=user@host
-```
-
-## jeb-remote
-
-需要配置.env
-
-```bash
-export JEB_REMOTE_HOST=user@host
-export JEB_REMOTE_JEB_HOME=/path/to/JEB
-export JEB_REMOTE_JEB_FRONTEND_JAR=/path/to/jeb-apk-decompiler.jar
-```
-
 ## killx
 
 `killx` 用来按完整命令行模式或按 TCP 监听端口查找进程，并选择性终止它们。
