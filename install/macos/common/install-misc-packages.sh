@@ -36,6 +36,7 @@ readonly PACKAGES=(
     yazi             # 终端文件管理器
     usage            # usage-spec CLI 工具，mise 相关组件
     chezmoi          # Dotfiles 管理工具
+    tmux             # 终端多路复用器（通过 Homebrew 安装）
     zellij           # 终端多路复用和工作区管理工具
 
     age              # 文件加密工具

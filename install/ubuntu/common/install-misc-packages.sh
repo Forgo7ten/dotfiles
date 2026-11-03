@@ -17,6 +17,7 @@ readonly PACKAGES=(
     curl
     net-tools
     zsh
+    tmux
     tree
     htop
     jnettop

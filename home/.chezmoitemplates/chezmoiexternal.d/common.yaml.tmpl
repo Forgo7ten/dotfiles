@@ -1,3 +1,12 @@
+# TPM 由 chezmoi external 安装；其余 tmux 插件由 TPM 从 tmux.conf 读取并安装。
+# 插件仓库存放在 XDG data 目录，不进入 chezmoi 管理的配置目录。
+".local/share/tmux/plugins/tpm":
+  type: "git-repo"
+  url: "https://github.com/tmux-plugins/tpm.git"
+  pull:
+    args: ["--ff-only"]
+  refreshPeriod: "168h"
+
 # Zinit 本体由 chezmoi 负责首次获取；后续使用 `zinit self-update` 更新。
 ".local/share/zinit/zinit.git":
   type: "git-repo"
