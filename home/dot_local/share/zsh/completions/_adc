@@ -146,6 +146,7 @@ if (( command_pos == 0 || command_pos == CURRENT )); then
     'apk:APK 拉取辅助命令'
     'pkg:Android 包信息辅助命令'
     'lsposed:打开 LSPosed Manager'
+    'restart-server:重启 adb server'
     'doctor:检查 Bash、adb、fzf 和缓存状态'
     'help:显示 adc 自定义帮助'
   )
@@ -180,7 +181,7 @@ fi
 
 # 非 adc 自定义命令直接交给系统 adb completion。
 case "$command" in
-  device|cache|apk|pkg|lsposed|doctor|help)
+  device|cache|apk|pkg|lsposed|restart-server|doctor|help)
     ;;
   *)
     _adc_delegate_adb
@@ -309,7 +310,7 @@ case "$words[1]" in
     esac
     ;;
 
-  lsposed|doctor|help)
+  lsposed|restart-server|doctor|help)
     _message -r '没有更多参数'
     ;;
 esac

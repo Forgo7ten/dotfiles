@@ -1,0 +1,5 @@
+#compdef adx
+
+# 复用 _adc 的自定义命令与原生 adb 补全。
+(( $+functions[_adc] )) || autoload -Uz _adc 2>/dev/null || return 1
+_adc "$@"

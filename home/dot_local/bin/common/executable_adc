@@ -8,7 +8,7 @@
 #   3. 用户已经通过 -s/-d/-e/-t 或 ANDROID_SERIAL 指定目标时，完全尊重原生 adb 行为。
 #   4. 多设备选择缓存默认关闭；启用后按“server 调用上下文 -> 设备”保存选择结果。
 #      上下文只记录用户传入的 -H/-P/-L 和相关环境变量，不推导最终 adb server endpoint。
-#   5. 保留少量常用 Android 辅助命令：cache / device / apk / pkg / lsposed / doctor。
+#   5. 保留少量常用 Android 辅助命令：cache / device / apk / pkg / lsposed / doctor / restart-server。
 #
 # 运行要求：Bash >= 5.0。正常调用不主动检查版本和依赖，需要时执行 `adc doctor`。
 
@@ -38,6 +38,7 @@ SELECTABLE_DEVICE_INDICES=()
 # 行为约束：一次 adc 调用只解析一次目标；后续内部 adb 调用复用同一 TARGET_ARGS。
 TARGET_ARGS=()
 CACHE_CONTEXT="default"
+ALWAYS_SELECT=0
 
 usage() {
   cat <<'EOF_USAGE'
@@ -63,6 +64,7 @@ usage() {
   adc pkg info <FILTER>           打开唯一匹配应用的 Android 应用详情页
 
   adc lsposed                     打开 LSPosed Manager
+  adc restart-server              依次执行 adb kill-server 和 adb start-server
   adc doctor                      检查 Bash、adb、fzf 和缓存状态
   adc help                        只显示 adc 自定义帮助
 
@@ -551,6 +553,12 @@ resolve_device() {
   if [ "$count" -eq 1 ]; then
     printf '%s\n' "${DEVICE_SERIALS[${SELECTABLE_DEVICE_INDICES[0]}]}"
     return 0
+  fi
+
+  # adx 强制选择多设备，跳过缓存；单设备在上方直接返回。
+  if [ "$ALWAYS_SELECT" -eq 1 ]; then
+    select_multiple_loaded_devices
+    return $?
   fi
 
   cache_mode="$(get_cache_mode)" || return $?
@@ -1050,6 +1058,13 @@ command_doctor() {
 main() {
   local serial=""
 
+  # adx 的内部参数在 adb 参数解析前消费，避免透传。
+  if [ "${1:-}" = "--always-select" ]; then
+    ALWAYS_SELECT=1
+    shift
+    ORIGINAL_ARGS=("$@")
+  fi
+
   if [ "$#" -eq 0 ]; then
     usage
     return 0
@@ -1094,6 +1109,12 @@ main() {
   require_adb || return $?
 
   case "$COMMAND" in
+    restart-server)
+      [ "${#COMMAND_ARGS[@]}" -eq 0 ] || { fail "用法：adc restart-server"; return 2; }
+      "$ADB_BIN" "${ADB_DISCOVERY_ARGS[@]}" kill-server &&
+        "$ADB_BIN" "${ADB_DISCOVERY_ARGS[@]}" start-server
+      return $?
+      ;;
     device) command_device "${COMMAND_ARGS[@]}"; return $? ;;
     apk) command_apk "${COMMAND_ARGS[@]}"; return $? ;;
     pkg) command_pkg "${COMMAND_ARGS[@]}"; return $? ;;

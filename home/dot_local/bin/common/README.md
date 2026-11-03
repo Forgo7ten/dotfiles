@@ -18,12 +18,24 @@ adc device list / use / current / clear  # 显式设备缓存管理
 adc apk pull <FILTER> / pullall <DIR>     # 拉取匹配/全部 APK
 adc pkg uid [FILTER] / info <FILTER>      # 查询 UID / 打开应用详情页
 adc lsposed                               # 打开 LSPosed Manager
+adc restart-server                        # adb kill-server && adb start-server
 adc doctor                                # 环境诊断（Bash/adb/fzf/缓存）
 ```
 
 `device use/current/list/clear` 不受 cache on/off 禁用；`cache off` 仅停止普通多设备命令自动读取/更新缓存。`apk pull` / `pullall` 的结果状态在交互终端使用绿色 `[OK]` / 红色 `[FAILED]`，重定向或设置 `NO_COLOR` 时不输出 ANSI 颜色。
 
-其余参数原样交给 adb，例如 `adc shell`、`adc logcat`、`adc -s SERIAL install app.apk`。
+其余参数原样交给 adb，例如 `adc shell`、`adc logcat`、`adc -s SERIAL install app.apk`。`restart-server` 是 server 级命令，不触发设备选择；`-H/-P/-L` 等 server 参数会传递给两次 adb 调用，只有 kill-server 成功才会 start-server。
+
+## adx
+
+`adx` 是 `adc` 的轻量封装，内部调用 `adc --always-select`。只有多台可用设备且未显式指定目标时，才每次交互选择并跳过自动选择缓存；单设备直接使用。`-s/-d/-e/-t` 或 `ANDROID_SERIAL` 指定的目标始终优先，不触发选择也不读写缓存。`adx` 不改变 `adc cache on/off` 设置，其他命令行为及 Zsh 补全均与 `adc` 一致。
+
+```bash
+adx shell                        # 多设备时交互选择后进入 shell
+adx logcat                       # 多设备时交互选择后查看日志
+adx -s SERIAL shell              # 显式指定目标时不弹出选择
+adx restart-server               # 不需要选择设备
+```
 
 ## jadx-remote
 

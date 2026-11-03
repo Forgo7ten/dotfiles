@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# 始终调用同目录 adc；设备选择逻辑由 adc 负责。
+exec "$(dirname "$0")/adc" --always-select "$@"
