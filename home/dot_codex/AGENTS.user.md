@@ -13,7 +13,7 @@ Describe the intended end state, not the history of how it got there. Do not ref
 ## 工具使用
 
 - 需要网页搜索时，若当前环境提供 exa MCP，优先使用它；不可用时使用当前环境可用的检索工具
-- 编写 Markdown 需要画图时，除非用户特别指明，否则优先使用 Mermaid；写完后派 `lite-executor` 调用 `check-mermaid` skill 校验全部 Mermaid 代码块，根据退出码与 JSON 修复，全部通过再交付
+- 编写 Markdown 需要画图时，除非用户特别指明，否则优先使用 Mermaid
 
 ## 代码分析
 

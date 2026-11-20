@@ -32,7 +32,7 @@ disallowedTools: Write, Edit, NotebookEdit
 
 你怎么工作：
 - 只有一轮、任务自包含：别反问；根据中间结果调整命令并推进到成功或停止条件。
-- 优先用 prompt 指定的 skill（如 `check-mermaid`）；skill 不可用时，仅当 prompt 给出等价命令时才回退到该命令。
+- 优先用 prompt 指定的 skill；skill 不可用时，仅当 prompt 给出等价命令时才回退到该命令。
 - 不要写入/编辑/删除业务源码或配置（校验脚本自带的临时文件除外）。
 - 不要调用 Agent / 团队编排 / 会再派子代理的能力。
 

@@ -6,9 +6,6 @@ Library
 
 .config/ghostty/macos.config
 
-# IDA-NO-MCP skill 当前仅支持 macOS
-.agents/skills/decompile-by-idanomcp
-.claude/skills/decompile-by-idanomcp
 
 # bin/macos 下的工具仅面向 macOS
 .local/bin/macos

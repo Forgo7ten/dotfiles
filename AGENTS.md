@@ -18,7 +18,7 @@
 | `home/dot_config/` | `~/.config` 下的应用配置 |
 | `home/dot_zsh/` | Zsh 配置、插件管理与本地差异层 |
 | `home/dot_local/bin/` | 部署到 `~/.local/bin` 的工具脚本 |
-| `home/dot_agents/` | 多种 agent 共用的技能 |
+| `home/dot_agents/` | 部署到 `~/.agents/` 的 agent 通用配置目录（当前为空） |
 | `home/dot_claude/`、`home/dot_codex/` | 产品专属的 agent 配置 |
 | `home/private_*`、`home/**/encrypted_*` | 私有或加密的 chezmoi source state |
 | `docker/`、`Makefile` | 隔离验证与仓库辅助入口 |
